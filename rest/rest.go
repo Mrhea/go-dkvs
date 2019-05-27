@@ -24,6 +24,10 @@ type server struct {
 	stalled []*kvs.Entry
 }
 
+//======================================================================================================================
+//==========================================KEY-VALUE-STORE OPERATIONS==================================================
+//======================================================================================================================
+
 // node is a server type that contains a database and view of
 // the replicas in the subnet.
 var node = new(server)
@@ -56,7 +60,6 @@ func getEntry(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(exists)
 
 	}
-
 }
 
 // Put an Entry.
@@ -296,9 +299,19 @@ func GetAllEntries(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(entries)
 }
 
+//======================================================================================================================
+//======================================================================================================================
+//======================================================================================================================
+
+
+
+//======================================================================================================================
+//==================================================VIEW OPERATIONS=====================================================
+//======================================================================================================================
+
 // GetView reads it's receipient replica's view of the
 // key-value store.
-func GetView(w http.ResponseWriter, r *http.Request) {
+func getView(w http.ResponseWriter, r *http.Request) {
 	log.Println("VIEW: Handling GET request")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -318,7 +331,7 @@ func GetView(w http.ResponseWriter, r *http.Request) {
 
 // PutView adds another replica to its receipient replica's
 // view.
-func PutView(w http.ResponseWriter, r *http.Request) {
+func putView(w http.ResponseWriter, r *http.Request) {
 	log.Println("VIEW: Handling PUT request")
 
 	w.Header().Set("Content-Type", "application/json")
@@ -384,7 +397,7 @@ func putViewForward(w http.ResponseWriter, r *http.Request) {
 
 // DeleteView requests that a replica is delete
 // from it's receipient replica's view.
-func DeleteView(w http.ResponseWriter, r *http.Request) {
+func deleteView(w http.ResponseWriter, r *http.Request) {
 	log.Println("VIEW: Handling DELETE request")
 
 	w.Header().Set("Content-Type", "application/json")
@@ -445,6 +458,46 @@ func putDeleteForward(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(success)
 }
+//======================================================================================================================
+//===============================================SHARDING OPERATIONS====================================================
+//======================================================================================================================
+
+func getShardView(w http.ResponseWriter, r *http.Request){
+
+}
+
+func getShard(w http.ResponseWriter, r *http.Request){
+
+}
+
+func getShardMembers(w http.ResponseWriter, r *http.Request){
+
+}
+
+func getShardKeyCount(w http.ResponseWriter, r *http.Request){
+
+}
+
+func addNodeToShard(w http.ResponseWriter, r *http.Request){
+
+}
+
+func reshard(w http.ResponseWriter, r *http.Request){
+
+}
+//======================================================================================================================
+//======================================================================================================================
+//======================================================================================================================
+
+//======================================================================================================================
+//======================================================================================================================
+//======================================================================================================================
+
+
+
+//======================================================================================================================
+//==============================================STARTUP OPERATIONS======================================================
+//======================================================================================================================
 
 // Announce should be called upon node startup. Broadcasts
 // a view PUT request to subnet to enable other replicas to add
@@ -572,9 +625,17 @@ func InitServer(socket, viewString string) {
 	r.HandleFunc("/key-value-store/{key}", deleteEntry).Methods("DELETE")
 
 	// View Handlers / Endpoints
-	r.HandleFunc("/key-value-store-view", GetView).Methods("GET")
-	r.HandleFunc("/key-value-store-view", PutView).Methods("PUT")
-	r.HandleFunc("/key-value-store-view", DeleteView).Methods("DELETE")
+	r.HandleFunc("/key-value-store-view", getView).Methods("GET")
+	r.HandleFunc("/key-value-store-view", putView).Methods("PUT")
+	r.HandleFunc("/key-value-store-view", deleteView).Methods("DELETE")
+
+	// Shard Handlers / Endpoints
+	r.HandleFunc("/key-value-store-shard/shard-ids", getShardView).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/node-shard-id", getShard).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/shard-id-members/{ID}", getShardMembers).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/shard-id-key-count{ID}", getShardKeyCount).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/add-member/{ID}", addNodeToShard).Methods("PUT")
+	r.HandleFunc("/key-value-store-shard/reshard", reshard).Methods("PUT")
 
 	// Gossip Handler / Endpoint
 	// Instantly responds "Alive" if replica is running
@@ -604,3 +665,7 @@ func InitServer(socket, viewString string) {
 	log.Println("REST: Exposing port 8080 --> 808X")
 	log.Fatal(http.ListenAndServe(":8080", r)) // Blocks until terminated, so Gossip before
 }
+
+//======================================================================================================================
+//======================================================================================================================
+//======================================================================================================================
