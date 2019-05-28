@@ -3,6 +3,7 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/mrhea/CMPS128_Assignment4/shard"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -10,10 +11,10 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	gsp "github.com/mrhea/CMPS128_Assignment3/gossip"
-	"github.com/mrhea/CMPS128_Assignment3/kvs"
-	"github.com/mrhea/CMPS128_Assignment3/structs"
-	"github.com/mrhea/CMPS128_Assignment3/view"
+	gsp "github.com/mrhea/CMPS128_Assignment4/gossip"
+	"github.com/mrhea/CMPS128_Assignment4/kvs"
+	"github.com/mrhea/CMPS128_Assignment4/structs"
+	"github.com/mrhea/CMPS128_Assignment4/view"
 )
 
 //const NULL int = -999
@@ -21,6 +22,7 @@ import (
 type server struct {
 	db      *kvs.Database
 	V       *view.View
+	S 		*shard.ShardView
 	stalled []*kvs.Entry
 }
 
@@ -598,7 +600,7 @@ func fetchEntries(w http.ResponseWriter, r *http.Request) {
 }
 
 // InitServer setups a RESTful-accessible API.
-func InitServer(socket, viewString string) {
+func InitServer(socket, viewString, shardCount string) {
 	log.Println("REST: Initializing a new server node")
 	// Init router
 	log.Println("REST: Initializing a new router")
@@ -607,6 +609,10 @@ func InitServer(socket, viewString string) {
 	// Init view
 	log.Println("REST: Initializing VIEW for router")
 	node.V = view.InitView(socket, viewString)
+
+	// Init shards
+	log.Println("REST: Initializing SHARDS for router")
+	node.S = shard.InitShards(socket, shardCount, viewString)
 
 	// Init database
 	log.Println("REST: Initializing DATABASE for router")
