@@ -1,0 +1,16 @@
+Task List:
+  SHARDING =========================
+    - Mechanism to determine placement of nodes within shards to ensure fault tolerance
+    - Get the shard IDs of the store (id of each shard)
+    = Get the shard ID of a node (which shard a node belongs to)
+    = Get the members that belong to a specific shard ID
+    = Get the number of keys in a shard
+    - Add a node to a shard
+    - Mechanism to reshard the store when an administrator(client) sends a reshard request to a node
+  VIEW ================================
+    NOTHING
+  KEY VALUE OPERATIONS ========================
+    - all keys need to be evenly distributed across all shards/ a key-to-shard strategy
+    - any node should be able to determine which shard a key is in
+    - PUT/DELETE/GET works for any key for any node keeping causal consistency
+
