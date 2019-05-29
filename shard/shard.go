@@ -31,31 +31,32 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 		log.Println("Shard count too small, ERROR") //throw an error here?
 		os.Exit(126)
 	}
+
+	shardLen := len(replicas) / shardCount
 	//correct length, continue...
 	for i := 1; i <= shardCount; i++ {
-		if len(replicas) >= 2 {
-			var ip1 string
-			var ip2 string
-			ip1, ip2, replicas = replicas[0], replicas[1], replicas[2:]
-			temp := &shard{members:[], numKeys:0}
-			temp.members = append(temp.members, ip1)
-			temp.members = append(temp.members, ip2)
-			S.shardDB = append(S.shardDB, temp) //is this the right way of doing this?
-			if owner == ip1 || owner == ip2 {
-				S.id = i
-			}
-		} else if len(replicas) == 1{
-			ip3 := replicas[0]
-			temp := &S.shardDB[i-1].members
-			*temp = append(*temp, ip3)
-			if owner == ip3 {
-				S.id = i-1
+		if len(replicas) >= shardLen {
+			shardIPs := replicas[:shardLen]
+			replicas = replicas[shardLen:]
+			temp := &shard{members:shardIPs, numKeys:0}
+			S.shardDB = append(S.shardDB, temp)
+			for _, IP := range shardIPs {
+				if owner == IP{
+					S.id = i
+				}
 			}
 		}
 	}
-	//we are now correctly sharded in either groups of 2,
-	//with one group of 3 for odd lengths
-	//this can change, if we want larger default groups...
+	//if we have leftover replicas...
+	if len(replicas) > 0 && len(replicas) < shardCount {
+		for i, IP := range replicas {
+			temp := &S.shardDB[i].members
+			*temp = append(*temp, IP)
+			if owner == IP{
+				S.id = i
+			}
+		}
+	}
 	return &S
 }
 
@@ -94,5 +95,6 @@ func GetMembersOfShard(ID int, s *ShardView) []string {
 }
 
 func GetNumKeys(s *ShardView) int {
+	return 0
 	//I'm not sure if I want to keep track of this data in the shard...
 }
