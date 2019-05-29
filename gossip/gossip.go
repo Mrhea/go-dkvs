@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/mrhea/CMPS128_Assignment3/structs"
-	"github.com/mrhea/CMPS128_Assignment3/view"
+	"github.com/mrhea/CMPS128_Assignment4/structs"
+	"github.com/mrhea/CMPS128_Assignment4/view"
 )
 
 // Query health check message to nodes.

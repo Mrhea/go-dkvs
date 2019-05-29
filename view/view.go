@@ -18,7 +18,7 @@ type View struct {
 }
 
 // Replica holds the address of a replica.
-// Used in: rest.go/PutView
+// Used in: rest.go/PutViewv
 type Replica struct {
 	Address string `json:"socket-address"` // the address of a replica
 }

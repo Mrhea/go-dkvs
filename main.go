@@ -5,7 +5,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/mrhea/CMPS128_Assignment3/rest"
+	"github.com/mrhea/CMPS128_Assignment4/rest"
 )
 
 // func main() {
@@ -46,8 +46,11 @@ func main() {
 
 	viewString := os.Getenv("VIEW")
 
+	shardCount := os.Getenv("SHARD_COUNT")
+
 	log.Printf("Starting replica instance at IP: %s", owner)
 
 	// Initialize endpoints, database, and view
-	rest.InitServer(owner, viewString)
-}
+
+	rest.InitServer(owner, viewString, shardCount)
+	}

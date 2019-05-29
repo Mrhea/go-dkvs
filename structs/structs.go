@@ -105,26 +105,7 @@ type ViewDeleteError struct {
 	Message string `json:"message"`
 }
 
-// CausalPut response
-// May be used for either forwarding metadata between
-// replicas, or responding to a forward
-type CausalPut struct {
+type NodeShard struct {
 	Message string `json:"message"`
-	Version string `json:"version"`
-}
-
-// CausalGet response
-type CausalGet struct {
-	Message  string `json:"message"`
-	Version  string `json:"version"`
-	Metadata string `json:"causal-metadata"`
-	Value    string `json:"value"`
-}
-
-// CausalGetError response
-// Used in case of GET request for key-value pair with a
-// version number that does not yet exist.
-type CausalGetError struct {
-	Error   string `json:"message"`
-	Version string `json:"version"`
+	ID      string `json:"shard-id"`
 }
