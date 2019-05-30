@@ -9,23 +9,28 @@ import (
 
 type shard struct {
 	Members []string
-	numKeys int
+	NumKeys int
 }
 
 type ShardView struct {
-	ID             int //shard ID of current node...
-	ShardDB        []*shard
-	NumKeysInShard int
+	id             int //shard ID of current node...
+	shardDB        []*shard
 }
 
 //Each Node has a shardView, where it can see all the shards, and the members of all the shards/
 //It can also see it's own shardID, so we can access that data without a lookup.
 func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
+	if shardString == "" {
+		log.Println("Node started to be added later...")
+		return nil
+	}
 	shardCount, err := strconv.Atoi(shardString)
 	if err != nil {
 		panic(err)
 	}
+
 	var S ShardView
+	S.id = -1
 	//S.shardDB = make(map[int]*shard)
 
 	replicas := strings.Split(viewOfReplicas, ",")
@@ -36,15 +41,15 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 
 	shardLen := len(replicas) / shardCount
 	//correct length, continue...
-	for i := 1; i <= shardCount; i++ {
+	for i := 0; i < shardCount; i++ {
 		if len(replicas) >= shardLen {
 			shardIPs := replicas[:shardLen]
 			replicas = replicas[shardLen:]
-			temp := &shard{Members: shardIPs, numKeys: 0}
-			S.ShardDB = append(S.ShardDB, temp)
+			temp := &shard{Members: shardIPs, NumKeys: 0}
+			S.shardDB = append(S.shardDB, temp)
 			for _, IP := range shardIPs {
 				if owner == IP {
-					S.ID = i
+					S.id = i+1
 				}
 			}
 		}
@@ -52,10 +57,10 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	//if we have leftover replicas...
 	if len(replicas) > 0 && len(replicas) < shardCount {
 		for i, IP := range replicas {
-			temp := &S.ShardDB[i].Members
+			temp := &S.shardDB[i].Members
 			*temp = append(*temp, IP)
 			if owner == IP {
-				S.ID = i
+				S.id = i+1
 			}
 		}
 	}
@@ -75,28 +80,38 @@ func Reshard(shardCount int, s *ShardView) {
 	*/
 }
 
-//gets all active shards in the form of an int list.
+//gets all active shards in the form of a string
 //easy to marshall into json data.
-func GetAllShards(s *ShardView) []int {
-	shardIDs := make([]int, 0) //apparently if you make a slice like this, it outputs correctly to json?
+func GetShardCount(s *ShardView) string {
+	return strconv.Itoa(len(s.shardDB))
+
+}
+func GetAllShards(s *ShardView) string {
+	shardIDs := make([]string, 0) //apparently if you make a slice like this, it outputs correctly to json?
 	//var shardIDs []int
-	for i := 1; i <= len(s.ShardDB); i++ {
-		if s.ShardDB[i] != nil {
-			shardIDs = append(shardIDs, i)
+	for i := 0; i < len(s.shardDB); i++ {
+		if s.shardDB[i] != nil {
+			shardIDs = append(shardIDs, strconv.Itoa(i))
 		}
 	}
-	return shardIDs
+	return strings.Join(shardIDs, ",")
 }
 
 func GetCurrentShard(s *ShardView) int {
-	return s.ID
+	return s.id
 }
 
 func GetMembersOfShard(ID int, s *ShardView) []string {
-	return s.ShardDB[ID].Members
+	return s.shardDB[ID-1].Members
 }
 
-func GetNumKeys(s *ShardView) int {
-	return 0
-	//I'm not sure if I want to keep track of this data in the shard...
+func GetNumKeysInShard(shardID int, s *ShardView) int {
+	return s.shardDB[shardID-1].NumKeys
+}
+
+func AddNodeToShard(address string, shardID int, s *ShardView) {
+	s.id = shardID
+	temp := &s.shardDB[s.id-1].Members
+	*temp = append(*temp, address)
+
 }

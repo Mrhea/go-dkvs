@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"strconv"
 	"time"
 
 	"github.com/mrhea/CMPS128_Assignment4/shard"
@@ -472,11 +473,11 @@ func getShardIDsOfStore(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-VIEW request")
 	w.Header().Set("Content-Type", "application/json")
 
-	// Grab the slice of members in the shard view
-	// shardViewSlice := node.S.ShardDB
+	shardIds := shard.GetAllShards(node.S)
 
-	// Join view slice into string for response
-	// shardViewString := strings.Join(shardViewSlice[:], ",")
+	resp := structs.ShardIDs{Message: "Shard IDs retrieved successfully", ShardIDs: shardIds}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(resp)
 
 }
 
@@ -484,9 +485,9 @@ func getShardID(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
-	shardID := node.S.ID
+	shardID := shard.GetCurrentShard(node.S)
 
-	resp := structs.ShardIDs{Message: "Shard ID of the node retrived successfully", ShardID: shardID}
+	resp := structs.NodeShardID{Message: "Shard ID of the node retrived successfully", ShardID: shardID}
 	w.WriteHeader(200)
 	json.NewEncoder(w).Encode(resp)
 }
@@ -495,15 +496,14 @@ func getShardMembers(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-MEMBERS request")
 	w.Header().Set("Content-Type", "application/json")
 
-	// Grab shard view
-	shardView := node.S.ShardDB
+	params := mux.Vars(r)
+	shardID, _ := strconv.Atoi(params["ID"])
 
-	// Get members from view
-	currNodeShard := shardView[node.S.ID]
-	members := strings.Join(currNodeShard.Members[:], ",")
-	log.Printf("REST: Members of shard: %s", members)
+	shardView := shard.GetMembersOfShard(shardID, node.S)
+	viewString := strings.Join(shardView, ",")
 
-	resp := structs.ShardMembers{Message: "Members of shard ID retrieved successfully", ShardIDMembers: members}
+	log.Printf("REST: Members of shard: %s", viewString)
+	resp := structs.ShardMembers{Message: "Members of shard ID retrieved successfully", ShardIDMembers: viewString}
 	w.WriteHeader(200)
 	json.NewEncoder(w).Encode(resp)
 }
@@ -512,7 +512,10 @@ func getShardKeyCount(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-KEY-COUNT request")
 	w.Header().Set("Content-Type", "application/json")
 
-	shardIDCount := node.S.NumKeysInShard
+	params := mux.Vars(r)
+	shardID, _ := strconv.Atoi(params["ID"])
+
+	shardIDCount := shard.GetNumKeysInShard(shardID, node.S)
 
 	resp := structs.ShardKeyCount{Message: "Key count of shard ID retrieved",
 		ShardIDKeyCount: shardIDCount}
@@ -521,19 +524,74 @@ func getShardKeyCount(w http.ResponseWriter, r *http.Request) {
 }
 
 func addNodeToShard(w http.ResponseWriter, r *http.Request) {
+	//THIS is a WIP it seems like it will be way more complicated than we thought
 	log.Println("REST: Handling ADD-NODE-TO-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
+	params := mux.Vars(r)
+	shardID, _ := strconv.Atoi(params["ID"])
 	var rep structs.Replica
 	_ = json.NewDecoder(r.Body).Decode(&rep)
 
-	ID := node.S.ID
-	// Append new node to the members of the shard view shardDB array of shards???
-	node.S.ShardDB[ID].Members = append(node.S.ShardDB[ID].Members, rep.Address)
+	shard.AddNodeToShard(rep.Address, shardID, node.S)
+
+	//WE NEED TO COPY ALL THE KEYS FROM THE SHARD INTO OUR NEW NODE HERE
 
 	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
 	w.WriteHeader(200)
 	json.NewEncoder(w).Encode(resp)
+	for _, IP := range node.V.View {
+		if IP != node.V.Owner {
+			client := &http.Client{}
+			url := "http://" + IP + "/replicate/add-member/" + params["ID"]
+			reqData, _ := json.Marshal(rep)
+			req, err := http.NewRequest(r.Method, url, bytes.NewBuffer(reqData))
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			b, _ := ioutil.ReadAll(resp.Body)
+			var rspStruct structs.AddedNodeToShard
+			_ = json.Unmarshal(b, &rspStruct)
+
+			log.Println(rspStruct.Message)
+		}
+	}
+}
+
+func addNodeToShardForward(w http.ResponseWriter, r *http.Request){
+	log.Println("REST: Handling ADD-NODE-TO-SHARD request")
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	shardID, _ := strconv.Atoi(params["ID"])
+	var rep structs.Replica
+	_ = json.NewDecoder(r.Body).Decode(&rep)
+
+	shard.AddNodeToShard(rep.Address, shardID, node.S)
+
+	//WE NEED TO COPY ALL THE KEYS FROM THE SHARD INTO OUR NEW NODE HERE
+
+	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
+}
+
+func getShardInfo(w http.ResponseWriter, r *http.Request){
+	log.Println("REST: Handling GET-SHARD-COUNT request")
+	w.Header().Set("Content-Type", "application/json")
+	count := shard.GetShardCount(node.S) //accessor
+	view := strings.Join(node.V.View, ",") //non accessor
+
+	resp := structs.GetShardInfo{ShardCount: count, ModifiedView: view}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
+
+}
+func addForward(w http.ResponseWriter, r *http.Request){
 }
 
 func reshard(w http.ResponseWriter, r *http.Request) {
@@ -548,6 +606,28 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 //==============================================STARTUP OPERATIONS======================================================
 //======================================================================================================================
 
+func lateInitShard() {
+	randomIP, _ := view.GetRandomNode(node.V) //grabs a random replica to copy shardVIEW from
+	client := &http.Client{}
+	//first we need shardCount...
+	url1 := "http://" + randomIP + "/key-value-store/get-info/"
+	req, err := http.NewRequest("GET", url1, nil)
+	if err != nil{
+		panic(err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	var rspStruct structs.GetShardInfo
+	_ = json.Unmarshal(b, &rspStruct)
+
+	shardCount := rspStruct.ShardCount
+	modifiedView := rspStruct.ModifiedView
+
+	node.S = shard.InitShards(node.V.Owner, shardCount, modifiedView)
+}
 // Announce should be called upon node startup. Broadcasts
 // a view PUT request to subnet to enable other replicas to add
 // the owner node to their view. Afterwards, perform a view Get
@@ -660,6 +740,9 @@ func InitServer(socket, viewString, shardCount string) {
 	// Init shards
 	log.Println("REST: Initializing SHARDS for router")
 	node.S = shard.InitShards(socket, shardCount, viewString)
+	if node.S == nil {
+		lateInitShard()
+	}
 
 	// Init database
 	log.Println("REST: Initializing DATABASE for router")
@@ -671,6 +754,8 @@ func InitServer(socket, viewString, shardCount string) {
 
 	r.HandleFunc("/replicate/view/", putViewForward).Methods("PUT")
 	r.HandleFunc("/replicate/view/", putDeleteForward).Methods("DELETE")
+
+	r.HandleFunc("/replicate/add-member/{ID}", addNodeToShardForward).Methods("PUT")
 
 	// Router Handlers / Endpoints
 	r.HandleFunc("/key-value-store/{key}", getEntry).Methods("GET")
@@ -689,6 +774,11 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/key-value-store-shard/shard-id-key-count{ID}", getShardKeyCount).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member/{ID}", addNodeToShard).Methods("PUT")
 	r.HandleFunc("/key-value-store-shard/reshard", reshard).Methods("PUT")
+
+	//helper functions for communication between shards...
+	r.HandleFunc("/key-value-store-shard/get-info/", getShardInfo).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/add-member-replicate/", addForward).Methods("PUT")
+
 
 	// Gossip Handler / Endpoint
 	// Instantly responds "Alive" if replica is running

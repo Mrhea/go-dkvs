@@ -109,6 +109,11 @@ type ViewDeleteError struct {
 // ShardIDs response contains success message and
 // shard ids associated with the node.
 type ShardIDs struct {
+	Message  string `json:"message"`
+	ShardIDs string `json:"shard-ids"`
+}
+
+type NodeShardID struct {
 	Message string `json:"message"`
 	ShardID int    `json:"shard-id"`
 }
@@ -130,4 +135,9 @@ type ShardKeyCount struct {
 // AddedNodeToShard response contains success message
 type AddedNodeToShard struct {
 	Message string `json:"message"`
+}
+
+type GetShardInfo struct {
+	ShardCount   string `json:"shard-count"`
+	ModifiedView string `json:"modified-view"`
 }
