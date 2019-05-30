@@ -13,14 +13,15 @@ type shard struct {
 }
 
 type ShardView struct {
-	id int //shard ID of current node...
+	id      int //shard ID of current node...
 	shardDB []*shard
 }
- //Each Node has a shardView, where it can see all the shards, and the members of all the shards/
- //It can also see it's own shardID, so we can access that data without a lookup.
+
+//Each Node has a shardView, where it can see all the shards, and the members of all the shards/
+//It can also see it's own shardID, so we can access that data without a lookup.
 func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	shardCount, err := strconv.Atoi(shardString)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	var S ShardView
@@ -38,10 +39,10 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 		if len(replicas) >= shardLen {
 			shardIPs := replicas[:shardLen]
 			replicas = replicas[shardLen:]
-			temp := &shard{members:shardIPs, numKeys:0}
+			temp := &shard{members: shardIPs, numKeys: 0}
 			S.shardDB = append(S.shardDB, temp)
 			for _, IP := range shardIPs {
-				if owner == IP{
+				if owner == IP {
 					S.id = i
 				}
 			}
@@ -52,7 +53,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 		for i, IP := range replicas {
 			temp := &S.shardDB[i].members
 			*temp = append(*temp, IP)
-			if owner == IP{
+			if owner == IP {
 				S.id = i
 			}
 		}
@@ -60,17 +61,17 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	return &S
 }
 
-func Reshard(shardCount int, s *ShardView){
+func Reshard(shardCount int, s *ShardView) {
 	/*
-	How do we implement this? We'd have to decide which kvs values go where...
-	It'd probably be easiest to figure out which IPs aren't in any shards, and
-	append them one by one to the smallest shard. So:
-	1. Locate smallest shard
-	2. Append new IP
-	3. Copy all KVS
-	4. Repeat until all IP's are in a shard
-	(Don't delete this ^, add to mechanisms.txt)
-	 */
+		How do we implement this? We'd have to decide which kvs values go where...
+		It'd probably be easiest to figure out which IPs aren't in any shards, and
+		append them one by one to the smallest shard. So:
+		1. Locate smallest shard
+		2. Append new IP
+		3. Copy all KVS
+		4. Repeat until all IP's are in a shard
+		(Don't delete this ^, add to mechanisms.txt)
+	*/
 }
 
 //gets all active shards in the form of an int list.
@@ -78,7 +79,7 @@ func Reshard(shardCount int, s *ShardView){
 func GetAllShards(s *ShardView) []int {
 	shardIDs := make([]int, 0) //apparently if you make a slice like this, it outputs correctly to json?
 	//var shardIDs []int
-	for i := 1; i <= len(s.shardDB); i++{
+	for i := 1; i <= len(s.shardDB); i++ {
 		if s.shardDB[i] != nil {
 			shardIDs = append(shardIDs, i)
 		}

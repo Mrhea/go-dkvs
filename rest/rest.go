@@ -3,12 +3,13 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/mrhea/CMPS128_Assignment4/shard"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mrhea/CMPS128_Assignment4/shard"
 
 	"github.com/gorilla/mux"
 	gsp "github.com/mrhea/CMPS128_Assignment4/gossip"
@@ -22,7 +23,7 @@ import (
 type server struct {
 	db      *kvs.Database
 	V       *view.View
-	S 		*shard.ShardView
+	S       *shard.ShardView
 	stalled []*kvs.Entry
 }
 
@@ -305,8 +306,6 @@ func GetAllEntries(w http.ResponseWriter, r *http.Request) {
 //======================================================================================================================
 //======================================================================================================================
 
-
-
 //======================================================================================================================
 //==================================================VIEW OPERATIONS=====================================================
 //======================================================================================================================
@@ -465,41 +464,47 @@ func putDeleteForward(w http.ResponseWriter, r *http.Request) {
 //======================================================================================================================
 //======================================================================================================================
 
-
-
 //======================================================================================================================
 //===============================================SHARDING OPERATIONS====================================================
 //======================================================================================================================
 
-func getShardView(w http.ResponseWriter, r *http.Request){
+func getShardView(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling GET-SHARD-VIEW request")
+	w.Header().Set("Content-Type", "application/json")
 
 }
 
-func getShard(w http.ResponseWriter, r *http.Request){
+func getShardID(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling GET-SHARD request")
+	w.Header().Set("Content-Type", "application/json")
 
 }
 
-func getShardMembers(w http.ResponseWriter, r *http.Request){
+func getShardMembers(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling GET-SHARD-MEMBERS request")
+	w.Header().Set("Content-Type", "application/json")
 
 }
 
-func getShardKeyCount(w http.ResponseWriter, r *http.Request){
+func getShardKeyCount(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling GET-SHARD-KEY-COUNT request")
+	w.Header().Set("Content-Type", "application/json")
 
 }
 
-func addNodeToShard(w http.ResponseWriter, r *http.Request){
+func addNodeToShard(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling ADD-NODE-TO-SHARD request")
+	w.Header().Set("Content-Type", "application/json")
 
 }
 
-func reshard(w http.ResponseWriter, r *http.Request){
+func reshard(w http.ResponseWriter, r *http.Request) {
 
 }
 
 //======================================================================================================================
 //======================================================================================================================
 //======================================================================================================================
-
-
 
 //======================================================================================================================
 //==============================================STARTUP OPERATIONS======================================================

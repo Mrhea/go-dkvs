@@ -90,6 +90,7 @@ type ViewPut struct {
 	Message string `json:"message"`
 }
 
+// ViewReplica response
 type ViewReplica struct {
 	Message string `json:"message"`
 }
@@ -105,7 +106,23 @@ type ViewDeleteError struct {
 	Message string `json:"message"`
 }
 
-type NodeShard struct {
+// ShardIDs response contains success message and
+// shard ids associated with the node.
+type ShardIDs struct {
 	Message string `json:"message"`
-	ID      string `json:"shard-id"`
+	ShardID string `json:"shard-id"`
+}
+
+// ShardMembers response contains success message and
+// a string of the members of the shard.
+type ShardMembers struct {
+	Message        string `json:"message"`
+	ShardIDMembers string `json:"shard-id-memebrs"`
+}
+
+// ShardKeyCount response contains succcess message
+// and the number of keys within the shard.
+type ShardKeyCount struct {
+	Message         string `json:"message"`
+	ShardIDKeyCount string `json:"shard-id-key-count"`
 }
