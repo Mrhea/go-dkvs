@@ -8,13 +8,14 @@ import (
 )
 
 type shard struct {
-	members []string
-	numKeys int //probably don't need this?
+	Members []string
+	numKeys int
 }
 
 type ShardView struct {
-	ID      int //shard ID of current node...
-	ShardDB []*shard
+	ID             int //shard ID of current node...
+	ShardDB        []*shard
+	NumKeysInShard int
 }
 
 //Each Node has a shardView, where it can see all the shards, and the members of all the shards/
@@ -39,7 +40,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 		if len(replicas) >= shardLen {
 			shardIPs := replicas[:shardLen]
 			replicas = replicas[shardLen:]
-			temp := &shard{members: shardIPs, numKeys: 0}
+			temp := &shard{Members: shardIPs, numKeys: 0}
 			S.ShardDB = append(S.ShardDB, temp)
 			for _, IP := range shardIPs {
 				if owner == IP {
@@ -51,7 +52,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	//if we have leftover replicas...
 	if len(replicas) > 0 && len(replicas) < shardCount {
 		for i, IP := range replicas {
-			temp := &S.ShardDB[i].members
+			temp := &S.ShardDB[i].Members
 			*temp = append(*temp, IP)
 			if owner == IP {
 				S.ID = i
@@ -92,7 +93,7 @@ func GetCurrentShard(s *ShardView) int {
 }
 
 func GetMembersOfShard(ID int, s *ShardView) []string {
-	return s.ShardDB[ID].members
+	return s.ShardDB[ID].Members
 }
 
 func GetNumKeys(s *ShardView) int {

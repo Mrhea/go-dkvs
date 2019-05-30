@@ -468,35 +468,72 @@ func putDeleteForward(w http.ResponseWriter, r *http.Request) {
 //===============================================SHARDING OPERATIONS====================================================
 //======================================================================================================================
 
-func getShardView(w http.ResponseWriter, r *http.Request) {
+func getShardIDsOfStore(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-VIEW request")
 	w.Header().Set("Content-Type", "application/json")
 
-	// shardView := node.S.ShardDB
+	// Grab the slice of members in the shard view
+	// shardViewSlice := node.S.ShardDB
+
+	// Join view slice into string for response
+	// shardViewString := strings.Join(shardViewSlice[:], ",")
+
 }
 
 func getShardID(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
+	shardID := node.S.ID
+
+	resp := structs.ShardIDs{Message: "Shard ID of the node retrived successfully", ShardID: shardID}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func getShardMembers(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-MEMBERS request")
 	w.Header().Set("Content-Type", "application/json")
 
+	// Grab shard view
+	shardView := node.S.ShardDB
+
+	// Get members from view
+	currNodeShard := shardView[node.S.ID]
+	members := strings.Join(currNodeShard.Members[:], ",")
+	log.Printf("REST: Members of shard: %s", members)
+
+	resp := structs.ShardMembers{Message: "Members of shard ID retrieved successfully", ShardIDMembers: members}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func getShardKeyCount(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-KEY-COUNT request")
 	w.Header().Set("Content-Type", "application/json")
 
+	shardIDCount := node.S.NumKeysInShard
+
+	resp := structs.ShardKeyCount{Message: "Key count of shard ID retrieved",
+		ShardIDKeyCount: shardIDCount}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling ADD-NODE-TO-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
+	var rep structs.Replica
+	_ = json.NewDecoder(r.Body).Decode(&rep)
+
+	ID := node.S.ID
+	// Append new node to the members of the shard view shardDB array of shards???
+	node.S.ShardDB[ID].Members = append(node.S.ShardDB[ID].Members, rep.Address)
+
+	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
+	w.WriteHeader(200)
+	json.NewEncoder(w).Encode(resp)
 }
 
 func reshard(w http.ResponseWriter, r *http.Request) {
@@ -646,7 +683,7 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/key-value-store-view", deleteView).Methods("DELETE")
 
 	// Shard Handlers / Endpoints
-	r.HandleFunc("/key-value-store-shard/shard-ids", getShardView).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/shard-ids", getShardIDsOfStore).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/node-shard-id", getShardID).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-members/{ID}", getShardMembers).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-key-count{ID}", getShardKeyCount).Methods("GET")
