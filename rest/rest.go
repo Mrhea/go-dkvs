@@ -472,6 +472,7 @@ func getShardView(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-VIEW request")
 	w.Header().Set("Content-Type", "application/json")
 
+	// shardView := node.S.ShardDB
 }
 
 func getShardID(w http.ResponseWriter, r *http.Request) {
@@ -646,7 +647,7 @@ func InitServer(socket, viewString, shardCount string) {
 
 	// Shard Handlers / Endpoints
 	r.HandleFunc("/key-value-store-shard/shard-ids", getShardView).Methods("GET")
-	r.HandleFunc("/key-value-store-shard/node-shard-id", getShard).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/node-shard-id", getShardID).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-members/{ID}", getShardMembers).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-key-count{ID}", getShardKeyCount).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member/{ID}", addNodeToShard).Methods("PUT")

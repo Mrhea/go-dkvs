@@ -13,8 +13,8 @@ type shard struct {
 }
 
 type ShardView struct {
-	id      int //shard ID of current node...
-	shardDB []*shard
+	ID      int //shard ID of current node...
+	ShardDB []*shard
 }
 
 //Each Node has a shardView, where it can see all the shards, and the members of all the shards/
@@ -40,10 +40,10 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 			shardIPs := replicas[:shardLen]
 			replicas = replicas[shardLen:]
 			temp := &shard{members: shardIPs, numKeys: 0}
-			S.shardDB = append(S.shardDB, temp)
+			S.ShardDB = append(S.ShardDB, temp)
 			for _, IP := range shardIPs {
 				if owner == IP {
-					S.id = i
+					S.ID = i
 				}
 			}
 		}
@@ -51,10 +51,10 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	//if we have leftover replicas...
 	if len(replicas) > 0 && len(replicas) < shardCount {
 		for i, IP := range replicas {
-			temp := &S.shardDB[i].members
+			temp := &S.ShardDB[i].members
 			*temp = append(*temp, IP)
 			if owner == IP {
-				S.id = i
+				S.ID = i
 			}
 		}
 	}
@@ -79,8 +79,8 @@ func Reshard(shardCount int, s *ShardView) {
 func GetAllShards(s *ShardView) []int {
 	shardIDs := make([]int, 0) //apparently if you make a slice like this, it outputs correctly to json?
 	//var shardIDs []int
-	for i := 1; i <= len(s.shardDB); i++ {
-		if s.shardDB[i] != nil {
+	for i := 1; i <= len(s.ShardDB); i++ {
+		if s.ShardDB[i] != nil {
 			shardIDs = append(shardIDs, i)
 		}
 	}
@@ -88,11 +88,11 @@ func GetAllShards(s *ShardView) []int {
 }
 
 func GetCurrentShard(s *ShardView) int {
-	return s.id
+	return s.ID
 }
 
 func GetMembersOfShard(ID int, s *ShardView) []string {
-	return s.shardDB[ID].members
+	return s.ShardDB[ID].members
 }
 
 func GetNumKeys(s *ShardView) int {
