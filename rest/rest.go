@@ -3,11 +3,12 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
+	"hash/crc32"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"strings"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/mrhea/CMPS128_Assignment4/shard"
@@ -45,6 +46,10 @@ func getEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Extract key from url
 	params := mux.Vars(r)
+	// var e kvs.Entry
+	// _ = json.NewDecoder(r.Body).Decode(&e)
+	// e.Key = params["key"]
+	// computeHashIDAndShardKey(e.Key, r.Method)
 
 	// Handles if key exists in KVS
 	// if true return the value associated with key
@@ -75,6 +80,8 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 	var e kvs.Entry
 	_ = json.NewDecoder(r.Body).Decode(&e)
 	e.Key = params["key"]
+
+	// computeHashIDAndShardKey(e.Key, r.Method)
 
 	// Missing value in key-val pair, returns error - 400
 	if e.Val == "" { //not sure how to represent empty other than 0 for ints...
@@ -215,6 +222,9 @@ func deleteEntry(w http.ResponseWriter, r *http.Request) {
 	log.Println(metadata.Meta)
 
 	e := kvs.GetEntryStruct(params["key"], node.db)
+
+	// e.Key = params["key"]
+	// computeHashIDAndShardKey(e.Key, r.Method)
 
 	if kvs.CheckIfKeyExists(params["key"], node.db) {
 		kvs.EraseEntry(params["key"], node.db)
@@ -562,7 +572,7 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func addNodeToShardForward(w http.ResponseWriter, r *http.Request){
+func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling ADD-NODE-TO-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -580,10 +590,10 @@ func addNodeToShardForward(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(resp)
 }
 
-func getShardInfo(w http.ResponseWriter, r *http.Request){
+func getShardInfo(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-COUNT request")
 	w.Header().Set("Content-Type", "application/json")
-	count := shard.GetShardCount(node.S) //accessor
+	count := shard.GetShardCount(node.S)   //accessor
 	view := strings.Join(node.V.View, ",") //non accessor
 
 	resp := structs.GetShardInfo{ShardCount: count, ModifiedView: view}
@@ -591,11 +601,23 @@ func getShardInfo(w http.ResponseWriter, r *http.Request){
 	json.NewEncoder(w).Encode(resp)
 
 }
-func addForward(w http.ResponseWriter, r *http.Request){
+func addForward(w http.ResponseWriter, r *http.Request) {
 }
 
 func reshard(w http.ResponseWriter, r *http.Request) {
 
+}
+
+// Takes in a key and the current HTTP method. Computes a hashID
+// for the string, and shards it if a PUT request.
+// If DELETE, compute shardID and delete key from shard.
+// If GET, compute shardID and return.
+// In any case, we may forward if the computed shardID does not
+// correspond to the owner node's respective shard.
+func computeHashIDAndShardKey(key string, method string) {
+	// For now, just compute the hashID
+	hashID := crc32.ChecksumIEEE([]byte(key))
+	log.Printf("Hash ID for key %s: %d", key, hashID)
 }
 
 //======================================================================================================================
@@ -612,7 +634,7 @@ func lateInitShard() {
 	//first we need shardCount...
 	url1 := "http://" + randomIP + "/key-value-store/get-info/"
 	req, err := http.NewRequest("GET", url1, nil)
-	if err != nil{
+	if err != nil {
 		panic(err)
 	}
 	resp, err := client.Do(req)
@@ -628,6 +650,7 @@ func lateInitShard() {
 
 	node.S = shard.InitShards(node.V.Owner, shardCount, modifiedView)
 }
+
 // Announce should be called upon node startup. Broadcasts
 // a view PUT request to subnet to enable other replicas to add
 // the owner node to their view. Afterwards, perform a view Get
@@ -778,7 +801,6 @@ func InitServer(socket, viewString, shardCount string) {
 	//helper functions for communication between shards...
 	r.HandleFunc("/key-value-store-shard/get-info/", getShardInfo).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member-replicate/", addForward).Methods("PUT")
-
 
 	// Gossip Handler / Endpoint
 	// Instantly responds "Alive" if replica is running
