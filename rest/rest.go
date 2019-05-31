@@ -9,9 +9,10 @@ import (
 	"strings"
 	"strconv"
 	"time"
+	"hash/crc32"
+
 
 	"github.com/mrhea/CMPS128_Assignment4/shard"
-
 	"github.com/gorilla/mux"
 	gsp "github.com/mrhea/CMPS128_Assignment4/gossip"
 	"github.com/mrhea/CMPS128_Assignment4/kvs"
@@ -598,6 +599,38 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func keyDistrubute(w http.ResponseWriter, r *http.Request){
+	log.Println("REST: Handling Key Distribution")
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	key := params["key"]
+	shardCount, _ := strconv.Atoi(shard.GetShardCount(node.S))
+
+	shardID := (int(crc32.ChecksumIEEE([]byte(key))) % shardCount) + 1 //returns 1, 2, 3, ... ShardCount
+
+	if shard.DoesShardExist(shardID, node.S) {
+		IP := shard.GetRandomIPShard(shardID, node.S)
+		url := "http://" + IP + "/kvs/" + params["key"]
+		client := &http.Client{}
+		req, err := http.NewRequest(r.Method, url, r.Body)
+		if err != nil {
+			panic(err)
+		}
+		resp, err := client.Do(req)
+		if err != nil {
+			log.Println("Forwarding shard request couldn't be fulfilled")
+			panic(err)
+		}
+		b, _ := ioutil.ReadAll(resp.Body)
+		w.WriteHeader(resp.StatusCode)
+		w.Write(b)
+		log.Printf("forwarded response: %v", b)
+	} else {
+		log.Println("you suck and your shard is invalid")
+	}
+}
+
 //======================================================================================================================
 //======================================================================================================================
 //======================================================================================================================
@@ -758,9 +791,11 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/replicate/add-member/{ID}", addNodeToShardForward).Methods("PUT")
 
 	// Router Handlers / Endpoints
-	r.HandleFunc("/key-value-store/{key}", getEntry).Methods("GET")
-	r.HandleFunc("/key-value-store/{key}", putEntry).Methods("PUT")
-	r.HandleFunc("/key-value-store/{key}", deleteEntry).Methods("DELETE")
+	r.HandleFunc("/key-value-store/{key}", keyDistrubute).Methods("GET", "PUT", "DELETE")
+
+	r.HandleFunc("/kvs/{key}", getEntry).Methods("GET")
+	r.HandleFunc("/kvs/{key}", putEntry).Methods("PUT")
+	r.HandleFunc("/kvs/{key}", deleteEntry).Methods("DELETE")
 
 	// View Handlers / Endpoints
 	r.HandleFunc("/key-value-store-view", getView).Methods("GET")

@@ -2,9 +2,11 @@ package shard
 
 import (
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type shard struct {
@@ -114,4 +116,20 @@ func AddNodeToShard(address string, shardID int, s *ShardView) {
 	temp := &s.shardDB[s.id-1].Members
 	*temp = append(*temp, address)
 
+}
+
+func DoesShardExist(shardID int, s *ShardView) bool {
+	if shardID <= len(s.shardDB) {
+		if s.shardDB[shardID-1] != nil {
+			return true
+		}
+	}
+	return false
+}
+
+func GetRandomIPShard(shardID int, s *ShardView) string {
+	rand.Seed(time.Now().Unix())
+	randRange := len(s.shardDB[shardID].Members)
+	nodeToGossipWith := s.shardDB[shardID].Members[rand.Intn(randRange)]
+	return nodeToGossipWith
 }
