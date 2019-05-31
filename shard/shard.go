@@ -15,8 +15,8 @@ type shard struct {
 }
 
 type ShardView struct {
-	id             int //shard ID of current node...
-	shardDB        []*shard
+	id      int //shard ID of current node...
+	shardDB []*shard
 }
 
 //Each Node has a shardView, where it can see all the shards, and the members of all the shards/
@@ -51,7 +51,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 			S.shardDB = append(S.shardDB, temp)
 			for _, IP := range shardIPs {
 				if owner == IP {
-					S.id = i+1
+					S.id = i + 1
 				}
 			}
 		}
@@ -62,7 +62,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 			temp := &S.shardDB[i].Members
 			*temp = append(*temp, IP)
 			if owner == IP {
-				S.id = i+1
+				S.id = i + 1
 			}
 		}
 	}
