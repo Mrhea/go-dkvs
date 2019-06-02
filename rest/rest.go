@@ -818,7 +818,7 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/key-value-store-shard/shard-ids", getShardIDsOfStore).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/node-shard-id", getShardID).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-members/{ID}", getShardMembers).Methods("GET")
-	r.HandleFunc("/key-value-store-shard/shard-id-key-count{ID}", getShardKeyCount).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/shard-id-key-count/{ID}", getShardKeyCount).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member/{ID}", addNodeToShard).Methods("PUT")
 	r.HandleFunc("/key-value-store-shard/reshard", reshard).Methods("PUT")
 
