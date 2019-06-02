@@ -3,19 +3,18 @@ package rest
 import (
 	"bytes"
 	"encoding/json"
+	"hash/crc32"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"hash/crc32"
 
-
-	"github.com/mrhea/CMPS128_Assignment4/shard"
 	"github.com/gorilla/mux"
 	gsp "github.com/mrhea/CMPS128_Assignment4/gossip"
 	"github.com/mrhea/CMPS128_Assignment4/kvs"
+	"github.com/mrhea/CMPS128_Assignment4/shard"
 	"github.com/mrhea/CMPS128_Assignment4/structs"
 	"github.com/mrhea/CMPS128_Assignment4/view"
 )
@@ -635,7 +634,11 @@ func keyDistrubute(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		log.Printf("forwarded response: %v", b)
 	} else {
-		log.Println("you suck and your shard is invalid")
+		log.Println("Shard ID is invalid.")
+		// If shard ID is invalid, return Intenral Server Error
+		fail := structs.InternalError{InternalServerError: "Unknown error. Retry connection."}
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(fail)
 	}
 }
 

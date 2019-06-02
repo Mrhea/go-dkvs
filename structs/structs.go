@@ -141,3 +141,9 @@ type GetShardInfo struct {
 	ShardCount   string `json:"shard-count"`
 	ModifiedView string `json:"modified-view"`
 }
+
+// InternalError is a response specifically for errors
+// the server will not know how to handle. Return 500 after use. s
+type InternalError struct {
+	InternalServerError string `json:"internal-sever-error"`
+}

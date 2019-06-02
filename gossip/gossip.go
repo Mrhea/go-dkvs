@@ -66,11 +66,13 @@ func Gossip(V *view.View) {
 		// Oh my god there are too many panics
 		resp, err := client.Do(req)
 		if err != nil {
+			log.Println("GOSSIP: Gossip error. Deleting a node")
+
 			nodeToDelete := structs.Replica{Address: gossipNode}
 			nodeData, _ := json.Marshal(nodeToDelete)
 			deleteViewRoute := "http://" + V.Owner + "/key-value-store-view"
 
-			log.Println("DO WE REACH HERE======")
+			log.Print("Node being deleted: ")
 			log.Println(nodeToDelete.Address)
 
 			req, err := http.NewRequest("DELETE", deleteViewRoute, bytes.NewBuffer(nodeData))
@@ -88,7 +90,6 @@ func Gossip(V *view.View) {
 		gspSlice = append(gspSlice, a)
 	}
 }
-
 
 func formatRouteToReplica(addr string) string {
 	return "http://" + addr + "/gossip"
