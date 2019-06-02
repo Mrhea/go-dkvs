@@ -122,7 +122,7 @@ type NodeShardID struct {
 // a string of the members of the shard.
 type ShardMembers struct {
 	Message        string `json:"message"`
-	ShardIDMembers string `json:"shard-id-memebrs"`
+	ShardIDMembers string `json:"shard-id-members"`
 }
 
 // ShardKeyCount response contains succcess message

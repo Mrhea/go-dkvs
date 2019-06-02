@@ -93,7 +93,7 @@ func GetAllShards(s *ShardView) string {
 	//var shardIDs []int
 	for i := 0; i < len(s.shardDB); i++ {
 		if s.shardDB[i] != nil {
-			shardIDs = append(shardIDs, strconv.Itoa(i))
+			shardIDs = append(shardIDs, strconv.Itoa(i+1))
 		}
 	}
 	return strings.Join(shardIDs, ",")
@@ -109,6 +109,14 @@ func GetMembersOfShard(ID int, s *ShardView) []string {
 
 func GetNumKeysInShard(shardID int, s *ShardView) int {
 	return s.shardDB[shardID-1].NumKeys
+}
+
+func AddKeyToShard(shardID int, s *ShardView){
+	s.shardDB[shardID-1].NumKeys += 1
+}
+
+func RemoveKeyFromShard(shardID int, s *ShardView){
+	s.shardDB[shardID-1].NumKeys -= 1
 }
 
 func AddNodeToShard(address string, shardID int, s *ShardView) {

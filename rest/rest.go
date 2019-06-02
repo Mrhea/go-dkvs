@@ -154,7 +154,10 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 	}
 
 Success:
-	for _, IP := range node.V.View {
+	shardID := shard.GetCurrentShard(node.S)
+	shardIPs := shard.GetMembersOfShard(shardID, node.S)
+	shard.AddKeyToShard(shardID, node.S)
+	for _, IP := range shardIPs {
 		if IP != node.V.Owner {
 			client := &http.Client{}
 			url := "http://" + IP + "/replicate/" + e.Key
@@ -256,7 +259,10 @@ func deleteEntry(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 Success:
-	for _, IP := range node.V.View {
+	shardID := shard.GetCurrentShard(node.S)
+	shardIPs := shard.GetMembersOfShard(shardID, node.S)
+	shard.RemoveKeyFromShard(shardID, node.S)
+	for _, IP := range shardIPs {
 		if IP != node.V.Owner {
 			client := &http.Client{}
 			url := "http://" + IP + "/replicate/" + params["key"]
@@ -606,7 +612,7 @@ func addForward(w http.ResponseWriter, r *http.Request) {
 func reshard(w http.ResponseWriter, r *http.Request) {
 
 }
-func keyDistrubute(w http.ResponseWriter, r *http.Request) {
+func keyDistribute(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling Key Distribution")
 	w.Header().Set("Content-Type", "application/json")
 
@@ -635,7 +641,7 @@ func keyDistrubute(w http.ResponseWriter, r *http.Request) {
 		log.Printf("forwarded response: %v", b)
 	} else {
 		log.Println("Shard ID is invalid.")
-		// If shard ID is invalid, return Intenral Server Error
+		// If shard ID is invalid, return Internal Server Error
 		fail := structs.InternalError{InternalServerError: "Unknown error. Retry connection."}
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(fail)
@@ -701,31 +707,33 @@ func announce() {
 	// Now we move to get all kv pairs from a random replica
 	// We go through the list of replicas just incase the one we pick is down
 	// we immediately go to another replica, if it's not we just continue
-	for _, IP := range node.V.View {
-		if IP != node.V.Owner {
-			client := &http.Client{Timeout: 25 * time.Second}
-			url := "http://" + IP + "/key-value-store/"
-			// Sends a GET request
-			req, err := http.NewRequest("GET", url, nil)
 
-			if err != nil {
-				panic(err)
-			}
-			// The response should be a slice of entries
-			resp, err := client.Do(req)
-
-			if err != nil {
-				panic(err)
-			}
-			time.Sleep(5 * time.Second)
-			// This adds entries to db
-			b, _ := ioutil.ReadAll(resp.Body)
-			entries := kvs.Transfer{}
-			json.Unmarshal(b, &entries)
-			kvs.AddAllKVPairs(entries, node.db)
-			break
-		}
-	}
+	//THIS IS CURRENTLY NOT NEEDED FOR ASSIGNMENT 4...
+	//for _, IP := range node.V.View {
+	//	if IP != node.V.Owner {
+	//		client := &http.Client{Timeout: 25 * time.Second}
+	//		url := "http://" + IP + "/key-value-store/"
+	//		// Sends a GET request
+	//		req, err := http.NewRequest("GET", url, nil)
+	//
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		// The response should be a slice of entries
+	//		resp, err := client.Do(req)
+	//
+	//		if err != nil {
+	//			panic(err)
+	//		}
+	//		time.Sleep(5 * time.Second)
+	//		// This adds entries to db
+	//		b, _ := ioutil.ReadAll(resp.Body)
+	//		entries := kvs.Transfer{}
+	//		json.Unmarshal(b, &entries)
+	//		kvs.AddAllKVPairs(entries, node.db)
+	//		break
+	//	}
+	//}
 	return
 }
 
@@ -803,7 +811,7 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/replicate/add-member/{ID}", addNodeToShardForward).Methods("PUT")
 
 	// Router Handlers / Endpoints
-	r.HandleFunc("/key-value-store/{key}", keyDistrubute).Methods("GET", "PUT", "DELETE")
+	r.HandleFunc("/key-value-store/{key}", keyDistribute).Methods("GET", "PUT", "DELETE")
 
 	r.HandleFunc("/kvs/{key}", getEntry).Methods("GET")
 	r.HandleFunc("/kvs/{key}", putEntry).Methods("PUT")

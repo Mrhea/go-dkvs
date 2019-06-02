@@ -14,3 +14,11 @@ Task List:
     - any node should be able to determine which shard a key is in
     - PUT/DELETE/GET works for any key for any node keeping causal consistency 
 
+
+curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://localhost:8082/key-value-store-shard/shard-ids
+
+curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://localhost:8082/key-value-store-shard/node-shard-id
+
+curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://localhost:8082/key-value-store-shard/shard-id-members/<shard-id>
+
+curl --request PUT --header "Content-Type: application/json" --write-out "%{http_code}\n" --data '{"socket-address": "THIS IS A TEST"}' http://localhost:8082/key-value-store-shard/add-member/2
