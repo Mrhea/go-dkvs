@@ -22,3 +22,7 @@ curl --request GET --header "Content-Type: application/json" --write-out "%{http
 curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://localhost:8082/key-value-store-shard/shard-id-members/<shard-id>
 
 curl --request PUT --header "Content-Type: application/json" --write-out "%{http_code}\n" --data '{"socket-address": "THIS IS A TEST"}' http://localhost:8082/key-value-store-shard/add-member/2
+
+ curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://localhost:8082/key-value-store-shard/shard-id-key-count/1
+
+ curl --request PUT --header "Content-Type: application/json" --write-out "%{http_code}\n" --data '{"socket-address": "10.10.0.8:8080"}' http://localhost:8082/key-value-store-shard/add-member/2

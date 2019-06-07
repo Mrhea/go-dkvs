@@ -134,7 +134,7 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 		log.Println("REST: PUT -> Key already exits... Replacing")
 		kvs.RemoveEntry(e.Key, node.db)
 		kvs.InsertEntry(e, node.db)
-		success := structs.Put{Message: "Updated successfully", Replaced: true, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
+		success := structs.Put{Message: "Updated successfully", Replaced: true, Version: e.Version, Meta: e.Meta, KeyShardID: strconv.Itoa(keyShardID)}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(success)
 		goto Success
@@ -144,11 +144,11 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 		log.Println("REST: PUT -> Key does not exist... Adding")
 		kvs.InsertEntry(e, node.db)
 		if len(e.Meta) == 1 {
-			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
+			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: strconv.Itoa(keyShardID)}
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(success)
 		} else {
-			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
+			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: strconv.Itoa(keyShardID)}
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(success)
 		}
@@ -162,6 +162,7 @@ Success:
 	shard.AddKeyToShard(shardID, node.S)
 	for _, IP := range shardIPs {
 		if IP != node.V.Owner {
+			log.Printf("REPLICATING TO: %v\n", IP)
 			client := &http.Client{}
 			url := "http://" + IP + "/replicate/" + e.Key
 			reqData, _ := json.Marshal(e)
@@ -181,6 +182,29 @@ Success:
 			log.Println(rspStruct.Message)
 		}
 	}
+	for _, IP := range node.V.View {
+		if IP != node.V.Owner {
+			log.Printf("REPLICATING VERSION TO: %v\n", IP)
+			client := &http.Client{}
+			url := "http://" + IP + "/update"
+			temp := structs.VersionCopy{Version:e.Version}
+			reqData, _ := json.Marshal(temp)
+			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqData))
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			b, _ := ioutil.ReadAll(resp.Body)
+			var rspStruct structs.ReplicaResponse
+			_ = json.Unmarshal(b, &rspStruct)
+
+			//We don't necessarily need to write this data to the client...
+
+		}
+	}
 }
 
 func putForward(w http.ResponseWriter, r *http.Request) {
@@ -190,7 +214,7 @@ func putForward(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&e)
 
 	if !(e.Version-1 == kvs.GetVer(node.db)) {
-		log.Println("REST: PUT -> Causality not met, stalling...")
+		log.Println("REST: PUTFORWARD -> Causality not met, stalling...")
 		node.stalled = append(node.stalled, &e)
 		failed := structs.Stall{Error: "Error in PUT", Message: "Causality not met"}
 		w.WriteHeader(http.StatusFailedDependency)
@@ -200,16 +224,18 @@ func putForward(w http.ResponseWriter, r *http.Request) {
 
 	kvs.UpdateVer(e.Version, node.db)
 	if kvs.CheckIfKeyExists(e.Key, node.db) {
-		log.Println("REST: PUT -> Key already exits... Replacing")
+		log.Println("REST: PUTFORWARD -> Key already exits... Replacing")
 		kvs.RemoveEntry(e.Key, node.db)
 		kvs.InsertEntry(e, node.db)
 		success := structs.ReplicaResponse{Message: "Replicated successfully", Version: e.Version}
 		w.WriteHeader(http.StatusOK)
+		shard.AddKeyToShard(shard.GetCurrentShard(node.S), node.S)
 		json.NewEncoder(w).Encode(success)
 	} else {
-		log.Println("REST: PUT -> Key does not exist... Adding")
+		log.Println("REST: PUTFORWARD -> Key does not exist... Adding")
 		kvs.InsertEntry(e, node.db)
 		success := structs.ReplicaResponse{Message: "Replicated successfully", Version: e.Version}
+		shard.AddKeyToShard(shard.GetCurrentShard(node.S), node.S)
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(success)
 	}
@@ -239,7 +265,7 @@ func deleteEntry(w http.ResponseWriter, r *http.Request) {
 		if !(e.Version-1 == kvs.GetVer(node.db)) {
 			log.Println("REST: PUT -> Causality not met, stalling...")
 			node.stalled = append(node.stalled, &e)
-			failed := structs.Stall{Error: "Error in PUT", Message: "Causality not met"}
+			failed := structs.Stall{Error: "Error in DELETE", Message: "Causality not met"}
 			w.WriteHeader(http.StatusFailedDependency)
 			json.NewEncoder(w).Encode(failed)
 			return
@@ -287,6 +313,30 @@ Success:
 			log.Println(rspStruct.Message)
 		}
 	}
+	for _, IP := range node.V.View {
+		if IP != node.V.Owner {
+			client := &http.Client{}
+			url := "http://" + IP + "/replicate/version"
+			temp := structs.VersionCopy{Version:e.Version}
+			reqData, _ := json.Marshal(temp)
+			req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqData))
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			b, _ := ioutil.ReadAll(resp.Body)
+			var rspStruct structs.ReplicaResponse
+			_ = json.Unmarshal(b, &rspStruct)
+
+			//We don't necessarily need to write this data to the client...
+			log.Println(rspStruct.Version)
+			log.Println(rspStruct.Message)
+
+		}
+	}
 }
 
 func deleteForward(w http.ResponseWriter, r *http.Request) {
@@ -309,6 +359,7 @@ func deleteForward(w http.ResponseWriter, r *http.Request) {
 	kvs.EraseEntry(e.Key, node.db)
 	log.Println("REST: DELETE -> Key deleted from KVS... Sending success response!")
 	success := structs.ReplicaResponse{Message: "Replicated successfully", Version: e.Version}
+	shard.RemoveKeyFromShard(shard.GetCurrentShard(node.S), node.S)
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(success)
 
@@ -503,10 +554,10 @@ func getShardID(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD request")
 	w.Header().Set("Content-Type", "application/json")
 
-	shardID := shard.GetCurrentShard(node.S)
+	shardID := strconv.Itoa(shard.GetCurrentShard(node.S))
 
 	resp := structs.NodeShardID{Message: "Shard ID of the node retrived successfully", ShardID: shardID}
-	w.WriteHeader(200)
+	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(resp)
 }
 
@@ -533,12 +584,41 @@ func getShardKeyCount(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
 	shardID, _ := strconv.Atoi(params["ID"])
 
-	shardIDCount := shard.GetNumKeysInShard(shardID, node.S)
+	IP := shard.GetRandomIPShard(shardID, node.S)
+	url := "http://" + IP + "/forward/numKeys/" + params["ID"]
+	client := &http.Client{}
+	req,err := http.NewRequest(r.Method, url, r.Body)
+	if err != nil {
+		panic(err)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	b, _ := ioutil.ReadAll(resp.Body)
+	w.WriteHeader(resp.StatusCode)
+	w.Write(b)
+}
+
+func forwardKeyCount(w http.ResponseWriter, r *http.Request) {
+	log.Println("REST: Handling GET-SHARD-KEY-COUNT request")
+	w.Header().Set("Content-Type", "application/json")
+
+	params := mux.Vars(r)
+	shardID, _ := strconv.Atoi(params["ID"])
+
+	log.Println(shardID)
+
+	temp := shard.GetShard(shardID, node.S)
+	shardIDCount := temp.NumKeys
+
+	log.Println(shardIDCount)
 
 	resp := structs.ShardKeyCount{Message: "Key count of shard ID retrieved",
 		ShardIDKeyCount: shardIDCount}
 	w.WriteHeader(200)
 	json.NewEncoder(w).Encode(resp)
+
 }
 
 func addNodeToShard(w http.ResponseWriter, r *http.Request) {
@@ -551,31 +631,33 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 	var rep structs.Replica
 	_ = json.NewDecoder(r.Body).Decode(&rep)
 
-	shard.AddNodeToShard(rep.Address, shardID, node.S)
+	shard.AddNodeToShard(node.V.Owner, rep.Address, shardID, node.S)
 	shardIPs := shard.GetMembersOfShard(shardID, node.S)
-	for _, IP := range shardIPs {
-		if IP != node.V.Owner {
-			client := &http.Client{Timeout: 25 * time.Second}
-			url := "http://" + IP + "/key-value-store/"
-			// Sends a GET request
-			req, err := http.NewRequest("GET", url, nil)
+	if node.V.Owner == rep.Address {
+		for _, IP := range shardIPs {
+			if IP != node.V.Owner {
+				client := &http.Client{Timeout: 25 * time.Second}
+				url := "http://" + IP + "/key-value-store/"
+				// Sends a GET request
+				req, err := http.NewRequest("GET", url, nil)
 
-			if err != nil {
-				panic(err)
-			}
-			// The response should be a slice of entries
-			resp, err := client.Do(req)
+				if err != nil {
+					panic(err)
+				}
+				// The response should be a slice of entries
+				resp, err := client.Do(req)
 
-			if err != nil {
-				panic(err)
+				if err != nil {
+					panic(err)
+				}
+				//time.Sleep(5 * time.Second)
+				// This adds entries to db
+				b, _ := ioutil.ReadAll(resp.Body)
+				entries := kvs.Transfer{}
+				json.Unmarshal(b, &entries)
+				kvs.AddAllKVPairs(entries, node.db)
+				break
 			}
-			//time.Sleep(5 * time.Second)
-			// This adds entries to db
-			b, _ := ioutil.ReadAll(resp.Body)
-			entries := kvs.Transfer{}
-			json.Unmarshal(b, &entries)
-			kvs.AddAllKVPairs(entries, node.db)
-			break
 		}
 	}
 	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
@@ -601,6 +683,7 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 			log.Println(rspStruct.Message)
 		}
 	}
+
 }
 
 func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
@@ -612,32 +695,34 @@ func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
 	var rep structs.Replica
 	_ = json.NewDecoder(r.Body).Decode(&rep)
 
-	shard.AddNodeToShard(rep.Address, shardID, node.S)
+	shard.AddNodeToShard(node.V.Owner, rep.Address, shardID, node.S)
 
 	shardIPs := shard.GetMembersOfShard(shardID, node.S)
-	for _, IP := range shardIPs {
-		if IP != node.V.Owner {
-			client := &http.Client{Timeout: 25 * time.Second}
-			url := "http://" + IP + "/key-value-store/"
-			// Sends a GET request
-			req, err := http.NewRequest("GET", url, nil)
+	if node.V.Owner == rep.Address {
+		for _, IP := range shardIPs {
+			if IP != node.V.Owner {
+				client := &http.Client{Timeout: 25 * time.Second}
+				url := "http://" + IP + "/key-value-store/"
+				// Sends a GET request
+				req, err := http.NewRequest("GET", url, nil)
 
-			if err != nil {
-				panic(err)
-			}
-			// The response should be a slice of entries
-			resp, err := client.Do(req)
+				if err != nil {
+					panic(err)
+				}
+				// The response should be a slice of entries
+				resp, err := client.Do(req)
 
-			if err != nil {
-				panic(err)
+				if err != nil {
+					panic(err)
+				}
+				//time.Sleep(5 * time.Second)
+				// This adds entries to db
+				b, _ := ioutil.ReadAll(resp.Body)
+				entries := kvs.Transfer{}
+				json.Unmarshal(b, &entries)
+				kvs.AddAllKVPairs(entries, node.db)
+				break
 			}
-			//time.Sleep(5 * time.Second)
-			// This adds entries to db
-			b, _ := ioutil.ReadAll(resp.Body)
-			entries := kvs.Transfer{}
-			json.Unmarshal(b, &entries)
-			kvs.AddAllKVPairs(entries, node.db)
-			break
 		}
 	}
 
@@ -649,6 +734,7 @@ func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
 func getShardInfo(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling GET-SHARD-COUNT request")
 	w.Header().Set("Content-Type", "application/json")
+
 	count := shard.GetShardCount(node.S)   //accessor
 	view := strings.Join(node.V.View, ",") //non accessor
 
@@ -673,12 +759,15 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 
 	shardID := (int(crc32.ChecksumIEEE([]byte(key))) % shardCount) + 1 //returns 1, 2, 3, ... ShardCount
 
+	log.Printf("SHARDID FOR THIS OPERATION: %v\n", shardID)
+
 	if shard.DoesShardExist(shardID, node.S) {
 		IP := shard.GetRandomIPShard(shardID, node.S)
 		url := "http://" + IP + "/kvs/" + params["key"]
 		client := &http.Client{}
 		req, err := http.NewRequest(r.Method, url, r.Body)
 		if err != nil {
+			log.Println("THIS IS WHERE WE PANIC - 684")
 			panic(err)
 		}
 		resp, err := client.Do(req)
@@ -699,6 +788,20 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func putVersion(w http.ResponseWriter, r *http.Request){
+	log.Println("REST: Handling Version Updates")
+	w.Header().Set("Content-Type", "application/json")
+
+	var rep structs.VersionCopy
+	_ = json.NewDecoder(r.Body).Decode(&rep)
+
+	kvs.UpdateVer(rep.Version, node.db)
+	success := structs.ViewReplica{Message: "Replication Successful"}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(success)
+
+}
+
 //======================================================================================================================
 //======================================================================================================================
 //======================================================================================================================
@@ -710,8 +813,9 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 func lateInitShard() {
 	randomIP, _ := view.GetRandomNode(node.V) //grabs a random replica to copy shardVIEW from
 	client := &http.Client{}
+	log.Println(randomIP)
 	//first we need shardCount...
-	url1 := "http://" + randomIP + "/key-value-store/get-info/"
+	url1 := "http://" + randomIP + "/key-value-store-shard/get-info"
 	req, err := http.NewRequest("GET", url1, nil)
 	if err != nil {
 		panic(err)
@@ -721,11 +825,15 @@ func lateInitShard() {
 		panic(err)
 	}
 	b, _ := ioutil.ReadAll(resp.Body)
-	var rspStruct structs.GetShardInfo
-	_ = json.Unmarshal(b, &rspStruct)
+	var respS structs.GetShardInfo
+	_ = json.Unmarshal(b, &respS)
 
-	shardCount := rspStruct.ShardCount
-	modifiedView := rspStruct.ModifiedView
+	shardCount := respS.ShardCount
+	modifiedView := respS.ModifiedView
+
+	log.Println("debug info")
+	log.Println(shardCount)
+	log.Println(modifiedView)
 
 	node.S = shard.InitShards(node.V.Owner, shardCount, modifiedView)
 }
@@ -860,6 +968,8 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/replicate/view/", putViewForward).Methods("PUT")
 	r.HandleFunc("/replicate/view/", putDeleteForward).Methods("DELETE")
 
+	r.HandleFunc("/update", putVersion).Methods("PUT")
+
 	r.HandleFunc("/replicate/add-member/{ID}", addNodeToShardForward).Methods("PUT")
 
 	// Router Handlers / Endpoints
@@ -883,8 +993,9 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/key-value-store-shard/reshard", reshard).Methods("PUT")
 
 	//helper functions for communication between shards...
-	r.HandleFunc("/key-value-store-shard/get-info/", getShardInfo).Methods("GET")
+	r.HandleFunc("/key-value-store-shard/get-info", getShardInfo).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member-replicate/", addForward).Methods("PUT")
+	r.HandleFunc("/forward/numKeys/{ID}", forwardKeyCount).Methods("GET")
 
 	// Gossip Handler / Endpoint
 	// Instantly responds "Alive" if replica is running

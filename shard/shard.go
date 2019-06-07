@@ -66,6 +66,11 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 			}
 		}
 	}
+
+	log.Print(S.id)
+	for _, shard := range S.shardDB{
+		log.Println(shard.Members)
+	}
 	return &S
 }
 
@@ -84,6 +89,10 @@ func Reshard(shardCount int, s *ShardView) {
 
 //gets all active shards in the form of a string
 //easy to marshall into json data.
+
+func GetShard(shardID int, s *ShardView) *shard {
+	return s.shardDB[shardID-1]
+}
 func GetShardCount(s *ShardView) string {
 	return strconv.Itoa(len(s.shardDB))
 
@@ -107,28 +116,32 @@ func GetMembersOfShard(ID int, s *ShardView) []string {
 	return s.shardDB[ID-1].Members
 }
 
-func GetNumKeysInShard(shardID int, s *ShardView) int {
-	return s.shardDB[shardID-1].NumKeys
+func GetNumKeysInShard(ID int, s *ShardView) int {
+	return s.shardDB[ID-1].NumKeys
 }
 
 func AddKeyToShard(shardID int, s *ShardView){
-	s.shardDB[shardID-1].NumKeys += 1
+	log.Printf("ADDING A KEY TO SHARD: %v\n", shardID)
+	s.shardDB[shardID-1].NumKeys = s.shardDB[shardID-1].NumKeys + 1
+	log.Printf("KEYCOUNT FOR SHARD %v: %v\n", shardID, s.shardDB[shardID-1].NumKeys)
 }
 
 func RemoveKeyFromShard(shardID int, s *ShardView){
-	s.shardDB[shardID-1].NumKeys -= 1
+	s.shardDB[shardID-1].NumKeys = s.shardDB[shardID-1].NumKeys - 1
 }
 
 func CopyKeyCount(shardID int, s *ShardView, i int){
 	s.shardDB[shardID-1].NumKeys = i
 }
 
-func AddNodeToShard(address string, shardID int, s *ShardView) {
-	s.id = shardID
-	temp := &s.shardDB[s.id-1].Members
-	*temp = append(*temp, address)
+func AddNodeToShard(owner string, address string, shardID int, s *ShardView) {
+	s.shardDB[shardID-1].Members = append(s.shardDB[shardID-1].Members, address)
+	if owner == address {
+		s.id = shardID
+	}
 
 }
+
 
 func DoesShardExist(shardID int, s *ShardView) bool {
 	if shardID <= len(s.shardDB) {
@@ -141,7 +154,7 @@ func DoesShardExist(shardID int, s *ShardView) bool {
 
 func GetRandomIPShard(shardID int, s *ShardView) string {
 	rand.Seed(time.Now().Unix())
-	randRange := len(s.shardDB[shardID].Members)
-	nodeToGossipWith := s.shardDB[shardID].Members[rand.Intn(randRange)]
+	randRange := len(s.shardDB[shardID-1].Members)
+	nodeToGossipWith := s.shardDB[shardID-1].Members[rand.Intn(randRange)]
 	return nodeToGossipWith
 }
