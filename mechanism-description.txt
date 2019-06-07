@@ -1,0 +1,5 @@
+SHARDING
+Our sharding mechanism is as defined in the assignment spec. We evenly divide up our nodes by the shard count,
+and split them into shards. Any leftover nodes are added in a linear manner.
+RESHARDING
+

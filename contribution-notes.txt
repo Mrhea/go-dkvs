@@ -1,10 +1,12 @@
 Contributions
 -------------
 
-Sehej -> 
+Sehej -> Implemented shard.go. Initial sharding procedure, all sharding methods(except resharding).
 
 Anthony -> 
 
-Matthew -> 
+Matthew -> General testing and debugging, Implemented consistent hashing procecure.
 
-Caesar -> 
+Caesar -> Implemented resharding.
+
+Everyone -> Implemented consistent hashing procedure, updated KVS methods to incorperate sharding.
