@@ -126,12 +126,15 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 
 	kvs.UpdateVer(e.Version, node.db)
 
+	// Grab key shard id for responses
+	keyShardID := shard.GetCurrentShard(node.S)
+
 	// Replaces value in key-val pair, returns success - 200
 	if kvs.CheckIfKeyExists(e.Key, node.db) {
 		log.Println("REST: PUT -> Key already exits... Replacing")
 		kvs.RemoveEntry(e.Key, node.db)
 		kvs.InsertEntry(e, node.db)
-		success := structs.Put{Message: "Updated successfully", Replaced: true, Version: e.Version, Meta: e.Meta}
+		success := structs.Put{Message: "Updated successfully", Replaced: true, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(success)
 		goto Success
@@ -141,11 +144,11 @@ func putEntry(w http.ResponseWriter, r *http.Request) {
 		log.Println("REST: PUT -> Key does not exist... Adding")
 		kvs.InsertEntry(e, node.db)
 		if len(e.Meta) == 1 {
-			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta}
+			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(success)
 		} else {
-			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta}
+			success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta, KeyShardID: keyShardID}
 			w.WriteHeader(http.StatusCreated)
 			json.NewEncoder(w).Encode(success)
 		}

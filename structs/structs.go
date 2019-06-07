@@ -3,10 +3,11 @@ package structs
 
 // Put response format
 type Put struct {
-	Message  string `json:"message"`
-	Replaced bool   `json:"replaced"`
-	Version  int    `json:"version"`
-	Meta     []int  `json:"causal-metadata"`
+	Message    string `json:"message"`
+	Replaced   bool   `json:"replaced"`
+	Version    int    `json:"version"`
+	Meta       []int  `json:"causal-metadata"`
+	KeyShardID int    `json:"shard-id"`
 }
 
 // Replica stores the address of a replica
