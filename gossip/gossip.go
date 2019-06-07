@@ -42,7 +42,7 @@ func Gossip(V *view.View) {
 
 	// Sleep before gossiping. Avoids errors when starting up
 	// replicas linearly.
-	time.Sleep(60 * time.Second) // Lower setup sleep time for actual test script?
+	time.Sleep(130 * time.Second) // Lower setup sleep time for actual test script?
 
 	// Gossip forever
 	for {
