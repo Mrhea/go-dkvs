@@ -830,6 +830,7 @@ func fetchEntries(w http.ResponseWriter, r *http.Request) {
 
 // InitServer setups a RESTful-accessible API.
 func InitServer(socket, viewString, shardCount string) {
+	time.Sleep(5 * time.Second)
 	log.Println("REST: Initializing a new server node")
 	// Init router
 	log.Println("REST: Initializing a new router")
