@@ -119,6 +119,10 @@ func RemoveKeyFromShard(shardID int, s *ShardView){
 	s.shardDB[shardID-1].NumKeys -= 1
 }
 
+func CopyKeyCount(shardID int, s *ShardView, i int){
+	s.shardDB[shardID-1].NumKeys = i
+}
+
 func AddNodeToShard(address string, shardID int, s *ShardView) {
 	s.id = shardID
 	temp := &s.shardDB[s.id-1].Members

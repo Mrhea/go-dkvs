@@ -549,7 +549,6 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&rep)
 
 	shard.AddNodeToShard(rep.Address, shardID, node.S)
-
 	shardIPs := shard.GetMembersOfShard(shardID, node.S)
 	for _, IP := range shardIPs {
 		if IP != node.V.Owner {
@@ -567,7 +566,7 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			time.Sleep(5 * time.Second)
+			//time.Sleep(5 * time.Second)
 			// This adds entries to db
 			b, _ := ioutil.ReadAll(resp.Body)
 			entries := kvs.Transfer{}
@@ -629,7 +628,7 @@ func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				panic(err)
 			}
-			time.Sleep(5 * time.Second)
+			//time.Sleep(5 * time.Second)
 			// This adds entries to db
 			b, _ := ioutil.ReadAll(resp.Body)
 			entries := kvs.Transfer{}
