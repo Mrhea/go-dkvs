@@ -550,8 +550,32 @@ func addNodeToShard(w http.ResponseWriter, r *http.Request) {
 
 	shard.AddNodeToShard(rep.Address, shardID, node.S)
 
-	//WE NEED TO COPY ALL THE KEYS FROM THE SHARD INTO OUR NEW NODE HERE
+	shardIPs := shard.GetMembersOfShard(shardID, node.S)
+	for _, IP := range shardIPs {
+		if IP != node.V.Owner {
+			client := &http.Client{Timeout: 25 * time.Second}
+			url := "http://" + IP + "/key-value-store/"
+			// Sends a GET request
+			req, err := http.NewRequest("GET", url, nil)
 
+			if err != nil {
+				panic(err)
+			}
+			// The response should be a slice of entries
+			resp, err := client.Do(req)
+
+			if err != nil {
+				panic(err)
+			}
+			time.Sleep(5 * time.Second)
+			// This adds entries to db
+			b, _ := ioutil.ReadAll(resp.Body)
+			entries := kvs.Transfer{}
+			json.Unmarshal(b, &entries)
+			kvs.AddAllKVPairs(entries, node.db)
+			break
+		}
+	}
 	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
 	w.WriteHeader(200)
 	json.NewEncoder(w).Encode(resp)
@@ -588,7 +612,32 @@ func addNodeToShardForward(w http.ResponseWriter, r *http.Request) {
 
 	shard.AddNodeToShard(rep.Address, shardID, node.S)
 
-	//WE NEED TO COPY ALL THE KEYS FROM THE SHARD INTO OUR NEW NODE HERE
+	shardIPs := shard.GetMembersOfShard(shardID, node.S)
+	for _, IP := range shardIPs {
+		if IP != node.V.Owner {
+			client := &http.Client{Timeout: 25 * time.Second}
+			url := "http://" + IP + "/key-value-store/"
+			// Sends a GET request
+			req, err := http.NewRequest("GET", url, nil)
+
+			if err != nil {
+				panic(err)
+			}
+			// The response should be a slice of entries
+			resp, err := client.Do(req)
+
+			if err != nil {
+				panic(err)
+			}
+			time.Sleep(5 * time.Second)
+			// This adds entries to db
+			b, _ := ioutil.ReadAll(resp.Body)
+			entries := kvs.Transfer{}
+			json.Unmarshal(b, &entries)
+			kvs.AddAllKVPairs(entries, node.db)
+			break
+		}
+	}
 
 	resp := structs.AddedNodeToShard{Message: "Node successfully added to shard"}
 	w.WriteHeader(200)
