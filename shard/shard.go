@@ -59,8 +59,8 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	//if we have leftover replicas...
 	if len(replicas) > 0 && len(replicas) < shardCount {
 		for i, IP := range replicas {
-			temp := &S.shardDB[i].Members
-			*temp = append(*temp, IP)
+			temp := S.shardDB[i].Members
+			temp = append(temp, IP)
 			if owner == IP {
 				S.id = i + 1
 			}
@@ -68,7 +68,7 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	}
 
 	log.Print(S.id)
-	for _, shard := range S.shardDB{
+	for _, shard := range S.shardDB {
 		log.Println(shard.Members)
 	}
 	return &S
@@ -120,17 +120,17 @@ func GetNumKeysInShard(ID int, s *ShardView) int {
 	return s.shardDB[ID-1].NumKeys
 }
 
-func AddKeyToShard(shardID int, s *ShardView){
+func AddKeyToShard(shardID int, s *ShardView) {
 	log.Printf("ADDING A KEY TO SHARD: %v\n", shardID)
 	s.shardDB[shardID-1].NumKeys = s.shardDB[shardID-1].NumKeys + 1
 	log.Printf("KEYCOUNT FOR SHARD %v: %v\n", shardID, s.shardDB[shardID-1].NumKeys)
 }
 
-func RemoveKeyFromShard(shardID int, s *ShardView){
+func RemoveKeyFromShard(shardID int, s *ShardView) {
 	s.shardDB[shardID-1].NumKeys = s.shardDB[shardID-1].NumKeys - 1
 }
 
-func CopyKeyCount(shardID int, s *ShardView, i int){
+func CopyKeyCount(shardID int, s *ShardView, i int) {
 	s.shardDB[shardID-1].NumKeys = i
 }
 
@@ -141,7 +141,6 @@ func AddNodeToShard(owner string, address string, shardID int, s *ShardView) {
 	}
 
 }
-
 
 func DoesShardExist(shardID int, s *ShardView) bool {
 	if shardID <= len(s.shardDB) {
