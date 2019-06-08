@@ -758,8 +758,8 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&e)
 
 	// newCount is the shardcount we need to reshard to
-	newCountAsString := e.ShardCount
-	newCount, _ := strconv.Atoi(newCountAsString)
+	newCount := e.ShardCount
+	newCountAsString := strconv.Itoa(newCount)
 	// thisCount is the current shard count we have
 	// thisCount := shard.GetShardCount(node.S)
 	// totalNodes is the count of total nodes in the store across all shards
@@ -823,7 +823,7 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 				client := &http.Client{Timeout: 25 * time.Second}
 				url := "http://" + IP + "/rehash"
 
-				rep := kvs.Reshard{ShardCount: newCountAsString}
+				rep := kvs.Reshard{ShardCount: newCount}
 				reqData, _ := json.Marshal(rep)
 				// Sends a GET request
 				req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqData))
@@ -870,7 +870,7 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 		}
 
 		success := structs.ReshardSuccess{Message: "Resharding done successfully"}
-		w.WriteHeader(http.StatusCreated)
+		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(success)
 	}
 
@@ -1017,8 +1017,8 @@ func changeShard(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&e)
 
 	// newCount is the shardcount we need to reshard to
-	newCountAsString := e.ShardCount
-	// newCount, _ := strconv.Atoi(newCountAsString)
+	newCount := e.ShardCount
+	newCountAsString := strconv.Itoa(newCount)
 	viewAsString := strings.Join(node.V.View, ",")
 
 	node.S = shard.InitShards(node.V.Owner, newCountAsString, viewAsString)

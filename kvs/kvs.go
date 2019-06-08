@@ -34,7 +34,7 @@ type Entry struct {
 // as JSON formated strings.
 // Entries now contain a metadata field for storing versions
 type Reshard struct {
-	ShardCount string `json:"shard-count"`
+	ShardCount int `json:"shard-count"`
 }
 
 func GetVer(db *Database) int {
