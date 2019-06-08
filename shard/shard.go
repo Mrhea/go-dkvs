@@ -59,8 +59,8 @@ func InitShards(owner, shardString, viewOfReplicas string) *ShardView {
 	//if we have leftover replicas...
 	if len(replicas) > 0 && len(replicas) < shardCount {
 		for i, IP := range replicas {
-			temp := &S.shardDB[i].Members
-			*temp = append(*temp, IP)
+			temp := S.shardDB[i].Members
+			temp = append(temp, IP)
 			if owner == IP {
 				S.id = i + 1
 			}
