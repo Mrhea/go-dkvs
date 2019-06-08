@@ -1,12 +1,12 @@
 Contributions
 -------------
 
-Sehej -> Implemented shard.go. Initial sharding procedure, all sharding methods(except resharding).
+Sehej -> Implemented shard.go. Initial sharding procedure, basic shard operations.
 
-Anthony -> 
+Anthony -> General debugging
 
-Matthew -> General testing and debugging, Implemented consistent hashing procecure.
+Matthew -> Testing, refactoring rest.go/gossip.go, general debugging and project planning
 
 Caesar -> Implemented resharding.
 
-Everyone -> Implemented consistent hashing procedure, updated KVS methods to incorperate sharding.
+Everyone -> Implemented consistent hashing procedure, updated KVS methods to incorporate sharding.

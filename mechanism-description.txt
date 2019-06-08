@@ -2,4 +2,6 @@ SHARDING
 Our sharding mechanism is as defined in the assignment spec. We evenly divide up our nodes by the shard count,
 and split them into shards. Any leftover nodes are added in a linear manner.
 RESHARDING
-
+For resharding, we enter each shard and get all key-value entries. Afterwards, we rehash the nodes to their new shards with the 
+new updated shard count. Finally, the original node that received the reshard request then goes through all kvs entries and redistributes
+them. 
