@@ -3,10 +3,11 @@ package structs
 
 // Put response format
 type Put struct {
-	Message  string `json:"message"`
-	Replaced bool   `json:"replaced"`
-	Version  int    `json:"version"`
-	Meta     []int  `json:"causal-metadata"`
+	Message    string `json:"message"`
+	Replaced   bool   `json:"replaced"`
+	Version    int    `json:"version"`
+	Meta       []int  `json:"causal-metadata"`
+	KeyShardID string `json:"shard-id"`
 }
 
 // Replica stores the address of a replica
@@ -72,6 +73,10 @@ type ReplicaResponse struct {
 	Version int    `json:"version"`
 }
 
+type VersionCopy struct {
+	Version int `json:"version"`
+}
+
 //ReplicaDownError response in case a replica does not exist in view
 type ReplicaDownError struct {
 	Message string `json:"message"`
@@ -115,7 +120,7 @@ type ShardIDs struct {
 
 type NodeShardID struct {
 	Message string `json:"message"`
-	ShardID int    `json:"shard-id"`
+	ShardID string `json:"shard-id"`
 }
 
 // ShardMembers response contains success message and
@@ -158,4 +163,8 @@ type ReshardError struct {
 // ReshardSuccess is a response when the reshard worked correctly
 type ReshardSuccess struct {
 	Message string `json:"message"`
+}
+
+type NumKeys struct {
+	Keys int `json"key-count"`
 }

@@ -51,6 +51,5 @@ func main() {
 	log.Printf("Starting replica instance at IP: %s", owner)
 
 	// Initialize endpoints, database, and view
-
 	rest.InitServer(owner, viewString, shardCount)
-	}
+}
