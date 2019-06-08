@@ -147,3 +147,15 @@ type GetShardInfo struct {
 type InternalError struct {
 	InternalServerError string `json:"internal-sever-error"`
 }
+
+// ReshardError is a response specifically for errors
+// when a reshard request's new shard count is too high
+// for our current node count.
+type ReshardError struct {
+	Message string `json:"message"`
+}
+
+// ReshardSuccess is a response when the reshard worked correctly
+type ReshardSuccess struct {
+	Message string `json:"message"`
+}

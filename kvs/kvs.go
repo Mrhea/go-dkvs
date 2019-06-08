@@ -30,6 +30,13 @@ type Entry struct {
 	Meta    []int  `json:"causal-metadata"` //keep this slice sorted
 }
 
+// Reshard data structure that contains resharding data
+// as JSON formated strings.
+// Entries now contain a metadata field for storing versions
+type Reshard struct {
+	ShardCount string `json:"shard-count"`
+}
+
 func GetVer(db *Database) int {
 	return db.latestVersion
 }
@@ -38,6 +45,7 @@ func UpdateVer(v int, db *Database) {
 	db.latestVersion = v
 }
 
+// struct to handle the transfer of the slice of kvs entries used in announce()
 type Transfer struct {
 	Entries []Entry `json:"entries"`
 	Version int     `json:"version"`

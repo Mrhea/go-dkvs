@@ -45,10 +45,6 @@ func getEntry(w http.ResponseWriter, r *http.Request) {
 
 	// Extract key from url
 	params := mux.Vars(r)
-	// var e kvs.Entry
-	// _ = json.NewDecoder(r.Body).Decode(&e)
-	// e.Key = params["key"]
-	// computeHashIDAndShardKey(e.Key, r.Method)
 
 	// Handles if key exists in KVS
 	// if true return the value associated with key
@@ -610,8 +606,181 @@ func addForward(w http.ResponseWriter, r *http.Request) {
 }
 
 func reshard(w http.ResponseWriter, r *http.Request) {
+	// Approach:
+	//		check if we have enough nodes to fit the amount of shards necessary
+	//			if yes:
+	//					execute the reshard functionality and return correct response
+	// 			if no:
+	//					return error response
+
+	log.Println("SHARD: Handling Reshard request")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract the shard count data from request
+	var e kvs.Reshard
+	_ = json.NewDecoder(r.Body).Decode(&e)
+
+	// newCount is the shardcount we need to reshard to
+	newCountAsString := e.ShardCount
+	newCount, _ := strconv.Atoi(newCountAsString)
+	// thisCount is the current shard count we have
+	// thisCount := shard.GetShardCount(node.S)
+	// totalNodes is the count of total nodes in the store across all shards
+	totalNodes := len(node.V.View)
+
+	// IF NO
+	//	create error response and set headers.
+	if totalNodes/newCount < 2 {
+		log.Println("SHARD: RESHARD -> Not enough nodes to ensure fault tolerance with number of shards")
+		error := structs.ReshardError{Message: "Not enough nodes to provide fault-tolerance with the given shard count!"}
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(error)
+	} else {
+		// IF nodes/shards >= 2 IS YES commence reshard operations
+
+		// This is where you put all the entries for rehashing
+		allEntries := make([]kvs.Entry, 0)
+
+		// this loops through each shard getting all entries of the first node
+		for i := range shard.GetShardCount(node.S) {
+			// IP is the address of the first node "10.10.0.X"
+			membersofShard := shard.GetMembersOfShard(i+1, node.S)
+			IP := membersofShard[0]
+			client := &http.Client{Timeout: 25 * time.Second}
+			url := "http://" + IP + "/key-value-store/"
+			// Creates a GET request
+			req, err := http.NewRequest("GET", url, nil)
+
+			if err != nil {
+				panic(err)
+			}
+			// Sends the GET request
+			// The response should be a slice of entries
+			resp, err := client.Do(req)
+
+			if err != nil {
+				panic(err)
+			}
+			time.Sleep(3 * time.Second)
+			// This extracts data into a Transfer struct
+			b, _ := ioutil.ReadAll(resp.Body)
+			entries := kvs.Transfer{}
+			json.Unmarshal(b, &entries)
+			// entries now has an []Entries field and a version field
+			log.Println(entries.Entries)
+
+			// here is where we add the entries of shard X into the allEntries var
+			for _, e := range entries.Entries {
+				allEntries = append(allEntries, e)
+			}
+		}
+
+		log.Println(allEntries)
+		// Now allEntries should have all kv entries of the entire store
+		// Now we initiate rehashing of the nodes to the new shard count
+
+		// this double loop goes to each node telling it to rehash with the new shard count
+		// and delete its current store
+		for _, IP := range node.V.View {
+			if IP != node.V.Owner {
+				client := &http.Client{Timeout: 25 * time.Second}
+				url := "http://" + IP + "/rehash"
+
+				rep := kvs.Reshard{ShardCount: newCountAsString}
+				reqData, _ := json.Marshal(rep)
+				// Sends a GET request
+				req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqData))
+
+				if err != nil {
+					panic(err)
+				}
+				// The response should be a slice of entries
+				_, err = client.Do(req)
+
+				if err != nil {
+					panic(err)
+				}
+
+			}
+		}
+		// end of part 2
+
+		// now we have to rehash this node
+		viewAsString := strings.Join(node.V.View, ",")
+		node.S = shard.InitShards(node.V.Owner, newCountAsString, viewAsString)
+
+		// Beginning of part 3
+		// we go through our list of allEntries hashing and sending each entry to its correct shard
+		for _, e := range allEntries {
+			// e contains an Entry struct
+
+			// hash to find the correct shardID
+			shardID := (int(crc32.ChecksumIEEE([]byte(e.Key))) % newCount) + 1
+
+			// construct the PUT request and send it off with the new key
+			if shard.DoesShardExist(shardID, node.S) {
+				IP := shard.GetRandomIPShard(shardID, node.S)
+				url := "http://" + IP + "/fill"
+				client := &http.Client{}
+				reqData, _ := json.Marshal(e)
+				req, err := http.NewRequest("PUT", url, bytes.NewBuffer(reqData))
+				if err != nil {
+					log.Print("Will fail on startup.")
+				}
+				_, err = client.Do(req)
+
+			}
+		}
+
+		success := structs.ReshardSuccess{Message: "Resharding done successfully"}
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(success)
+	}
 
 }
+
+// reshard put handles the put request when the original node is refilling the store
+// during the reshard execution. Part 3
+func reshardPut(w http.ResponseWriter, r *http.Request) {
+	log.Println("RESHARD: Handling PUT request IN reshardPut")
+	w.Header().Set("Content-Type", "application/json")
+
+	// params := mux.Vars(r)
+	var e kvs.Entry
+	_ = json.NewDecoder(r.Body).Decode(&e)
+	kvs.InsertEntry(e, node.db)
+
+	success := structs.Put{Message: "Added successfully", Replaced: false, Version: e.Version, Meta: e.Meta}
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(success)
+
+	shardID := shard.GetCurrentShard(node.S)
+	shardIPs := shard.GetMembersOfShard(shardID, node.S)
+	shard.AddKeyToShard(shardID, node.S)
+	for _, IP := range shardIPs {
+		if IP != node.V.Owner {
+			client := &http.Client{}
+			url := "http://" + IP + "/replicate/" + e.Key
+			reqData, _ := json.Marshal(e)
+			req, err := http.NewRequest(r.Method, url, bytes.NewBuffer(reqData))
+			if err != nil {
+				panic(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				panic(err)
+			}
+			b, _ := ioutil.ReadAll(resp.Body)
+			var rspStruct structs.ReplicaResponse
+			_ = json.Unmarshal(b, &rspStruct)
+
+			//We don't necessarily need to write this data to the client...
+			log.Println(rspStruct.Message)
+		}
+	}
+
+}
+
 func keyDistribute(w http.ResponseWriter, r *http.Request) {
 	log.Println("REST: Handling Key Distribution")
 	w.Header().Set("Content-Type", "application/json")
@@ -621,6 +790,8 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 	shardCount, _ := strconv.Atoi(shard.GetShardCount(node.S))
 
 	shardID := (int(crc32.ChecksumIEEE([]byte(key))) % shardCount) + 1 //returns 1, 2, 3, ... ShardCount
+
+	log.Println(shardID)
 
 	if shard.DoesShardExist(shardID, node.S) {
 		IP := shard.GetRandomIPShard(shardID, node.S)
@@ -632,7 +803,7 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 		}
 		resp, err := client.Do(req)
 		if err != nil {
-			log.Println("Forwarding shard request couldn't be fulfilled")
+			log.Println("Forwarding shard request couldn't be fulfilled IN keyDistribute")
 			panic(err)
 		}
 		b, _ := ioutil.ReadAll(resp.Body)
@@ -640,7 +811,7 @@ func keyDistribute(w http.ResponseWriter, r *http.Request) {
 		w.Write(b)
 		log.Printf("forwarded response: %v", b)
 	} else {
-		log.Println("Shard ID is invalid.")
+		log.Println("Shard ID is invalid. IN keyDistribute")
 		// If shard ID is invalid, return Internal Server Error
 		fail := structs.InternalError{InternalServerError: "Unknown error. Retry connection."}
 		w.WriteHeader(http.StatusInternalServerError)
@@ -677,6 +848,28 @@ func lateInitShard() {
 	modifiedView := rspStruct.ModifiedView
 
 	node.S = shard.InitShards(node.V.Owner, shardCount, modifiedView)
+}
+
+// This function is used to change the local node's shard perception in reshard
+func changeShard(w http.ResponseWriter, r *http.Request) {
+	log.Println("SHARD: Handling changeShard request")
+	w.Header().Set("Content-Type", "application/json")
+
+	// Extract the shard count data from request
+	var e kvs.Reshard
+	_ = json.NewDecoder(r.Body).Decode(&e)
+
+	// newCount is the shardcount we need to reshard to
+	newCountAsString := e.ShardCount
+	// newCount, _ := strconv.Atoi(newCountAsString)
+	viewAsString := strings.Join(node.V.View, ",")
+
+	node.S = shard.InitShards(node.V.Owner, newCountAsString, viewAsString)
+
+	// Now we delete all the current kvs entries as the original node has all entries
+	// NEED TO COPY LATEST VERSION FROM KVS ONCE U GET SEHEJ'S PUSH
+	// ver := node.db.latestVersion
+	node.db = kvs.InitDB()
 }
 
 // Announce should be called upon node startup. Broadcasts
@@ -828,7 +1021,12 @@ func InitServer(socket, viewString, shardCount string) {
 	r.HandleFunc("/key-value-store-shard/shard-id-members/{ID}", getShardMembers).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/shard-id-key-count/{ID}", getShardKeyCount).Methods("GET")
 	r.HandleFunc("/key-value-store-shard/add-member/{ID}", addNodeToShard).Methods("PUT")
+	// this endpoint only initiates the start of the reshard used from a client
 	r.HandleFunc("/key-value-store-shard/reshard", reshard).Methods("PUT")
+
+	// this endpoint is the one the initiator node uses to tell all other nodes to rehash
+	r.HandleFunc("/rehash", changeShard).Methods("PUT")
+	r.HandleFunc("/fill", reshardPut).Methods("PUT")
 
 	//helper functions for communication between shards...
 	r.HandleFunc("/key-value-store-shard/get-info/", getShardInfo).Methods("GET")

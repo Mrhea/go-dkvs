@@ -111,11 +111,11 @@ func GetNumKeysInShard(shardID int, s *ShardView) int {
 	return s.shardDB[shardID-1].NumKeys
 }
 
-func AddKeyToShard(shardID int, s *ShardView){
+func AddKeyToShard(shardID int, s *ShardView) {
 	s.shardDB[shardID-1].NumKeys += 1
 }
 
-func RemoveKeyFromShard(shardID int, s *ShardView){
+func RemoveKeyFromShard(shardID int, s *ShardView) {
 	s.shardDB[shardID-1].NumKeys -= 1
 }
 
@@ -137,7 +137,7 @@ func DoesShardExist(shardID int, s *ShardView) bool {
 
 func GetRandomIPShard(shardID int, s *ShardView) string {
 	rand.Seed(time.Now().Unix())
-	randRange := len(s.shardDB[shardID].Members)
-	nodeToGossipWith := s.shardDB[shardID].Members[rand.Intn(randRange)]
+	randRange := len(s.shardDB[shardID-1].Members)
+	nodeToGossipWith := s.shardDB[shardID-1].Members[rand.Intn(randRange)]
 	return nodeToGossipWith
 }
