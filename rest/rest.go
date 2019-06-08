@@ -835,7 +835,7 @@ func reshard(w http.ResponseWriter, r *http.Request) {
 				_, err = client.Do(req)
 
 				if err != nil {
-					panic(err)
+					log.Println("error in request to rehash nodes")
 				}
 
 			}
@@ -1049,6 +1049,9 @@ func announce() {
 		log.Print("Will fail on startup.")
 	}
 	_, err = client.Do(req)
+	if err != nil {
+		return
+	}
 
 	// Now that view-puts are done we get all xkv pairs from one random node
 	// --/*
