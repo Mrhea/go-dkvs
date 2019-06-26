@@ -25,7 +25,7 @@ curl --request PUT --header "Content-Type: application/json" --write-out "%{http
 curl --request GET --header "Content-Type: application/json" --write-out "%{http_code}\n" http://`<replica-socket-address>`/key-value-store-view
 
 # Alternatively, run script
-sudo python3 test_assignment3_v1.py
+sudo python3 test_assignment4_v4.py
 ```
 
 
