@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 
 	"github.com/gorilla/mux"
-	"github.com/mrhea/CMPS128_Assignment4/structs"
+	"github.com/mrhea/distributed-key-value-store/structs"
 
 	"log"
 	"net/http"

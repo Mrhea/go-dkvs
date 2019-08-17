@@ -12,11 +12,11 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
-	gsp "github.com/mrhea/CMPS128_Assignment4/gossip"
-	"github.com/mrhea/CMPS128_Assignment4/kvs"
-	"github.com/mrhea/CMPS128_Assignment4/shard"
-	"github.com/mrhea/CMPS128_Assignment4/structs"
-	"github.com/mrhea/CMPS128_Assignment4/view"
+	gsp "github.com/mrhea/distributed-key-value-store/gossip"
+	"github.com/mrhea/distributed-key-value-store/kvs"
+	"github.com/mrhea/distributed-key-value-store/shard"
+	"github.com/mrhea/distributed-key-value-store/structs"
+	"github.com/mrhea/distributed-key-value-store/view"
 )
 
 //const NULL int = -999

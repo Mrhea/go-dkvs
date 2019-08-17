@@ -5,26 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/mrhea/CMPS128_Assignment4/rest"
+	"github.com/mrhea/distributed-key-value-store/rest"
 )
-
-// func main() {
-// 	// Start forward/main instance
-// 	if os.Getenv("SOCKET_ADDRESS") != "" {
-// 		log.Println("============================================")
-// 		log.Println("Starting FORWARDING instance")
-
-// 		// Start FORWARD router
-// 		fwdAddr := os.Getenv("FORWARDING_ADDRESS")
-// 		fwd.InitForward(fwdAddr)
-// 	} else {
-// 		log.Println("============================================")
-// 		log.Println("Starting MAIN instance")
-
-// 		// Start REST server
-// 		rest.InitServer()
-// 	}
-// }
 
 // MultiLog streams logging to both server.log and stdout
 var MultiLog io.Writer
